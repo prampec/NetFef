@@ -1,13 +1,3 @@
-/*
- * This file is part of the NetFef serial network bus protocol project.
- *
- * Copyright (c) 2015.
- * Author: Balazs Kelemen
- * Contact: prampec+netfef@gmail.com
- *
- * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
- * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
- */
 #ifndef NETFEF_H
 #define NETFEF_H
 
@@ -34,13 +24,14 @@ class NetFefFrameBuilder {
 class NetFefFrameReader {
   public:
     NetFefFrameReader(byte* frame);
-    boolean isForMe(byte* myAddress);
+    boolean isForMe(const byte* myAddress);
     byte* getSenderAddress();
     byte* getCommand();
     byte* getParameter(char parameterName);
 
     byte targetAddressLength;
     byte sourceAddressLength;
+    Print* _debug = NULL;
     
   private:
     byte* _bytes;

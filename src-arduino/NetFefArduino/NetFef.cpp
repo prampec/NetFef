@@ -1,13 +1,3 @@
-/*
- * This file is part of the NetFef serial network bus protocol project.
- *
- * Copyright (c) 2015.
- * Author: Balazs Kelemen
- * Contact: prampec+netfef@gmail.com
- *
- * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
- * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
- */
 
 #include "NetFef.h"
 
@@ -80,27 +70,27 @@ NetFefFrameReader::NetFefFrameReader(byte* frame) {
   this->_bytes = frame;
   
   this->targetAddressLength = this->_bytes[2];
-  this->sourceAddressLength = this->_bytes[3 + this->sourceAddressLength];
-  this->_paramCount = this->_bytes[4 + this->sourceAddressLength + this->sourceAddressLength];
-  this->_paramsPos = 5 + this->sourceAddressLength + this->sourceAddressLength;
+  this->sourceAddressLength = this->_bytes[3 + this->targetAddressLength];
+  this->_paramCount = this->_bytes[4 + this->targetAddressLength + this->sourceAddressLength];
+  this->_paramsPos = 5 + this->targetAddressLength + this->sourceAddressLength;
 }
 
-boolean NetFefFrameReader::isForMe(byte* myAddress) {
-  int broadCast = memcmp(this->_bytes+4, BROADCAST_ADDRESS, 2);
-  return 0 == broadCast || ((this->targetAddressLength == 2) && (0 == memcmp(this->_bytes+4, myAddress, 2)));
+boolean NetFefFrameReader::isForMe(const byte* myAddress) {
+  int broadCast = memcmp(this->_bytes+3, BROADCAST_ADDRESS, 2);
+  return 0 == broadCast || ((this->targetAddressLength == 2) && (0 == memcmp(this->_bytes+3, myAddress, 2)));
 }
 
 byte* NetFefFrameReader::getSenderAddress() {
-  return (this->_bytes + (4 + this->sourceAddressLength));
+  return (this->_bytes + (4 + this->targetAddressLength));
 }
 
 byte* NetFefFrameReader::getParameter(char parameterName) {
   int pos = this->_paramsPos;
+if(this->_debug != NULL) this->_debug->print(this->_paramCount);
   for(int i = 0; i<this->_paramCount; i++) {
     if(this->_bytes[pos] == parameterName) {
       return this->_bytes + pos;
     } else {
-//      int paramSpace = NetFefParameterHelper::calculateParameterSpace(this->_bytes + pos);
       NetFefParameter parameter = NetFefParameter(this->_bytes + pos);
       int paramSpace = parameter.calculateSpace();
       if(paramSpace == -1) {
@@ -110,6 +100,7 @@ byte* NetFefFrameReader::getParameter(char parameterName) {
       pos += paramSpace;
     }
   }
+  return 0;
 }
 
 byte* NetFefFrameReader::getCommand() {
@@ -123,8 +114,12 @@ byte* NetFefFrameReader::getCommand() {
 
 // ============================= ////////////////////////////////// ==================================
 
+NetFefParameter::NetFefParameter(byte* parameterPointer) {
+  this->_pp = parameterPointer;
+}
+
 int NetFefParameter::calculateSpace() {
-  if(this->_pp[0] == 'c') {
+  if(this->isType('c')) {
     return 3;
   }
   // -- TODO: support more types!
@@ -135,8 +130,8 @@ boolean NetFefParameter::isType(char parameterType) {
   return this->_pp[1] == parameterType;
 }
 byte NetFefParameter::getValue1() {
-  if(this->_pp[0] == 'c') {
-    return this->_pp[3];
+  if(this->isType('c')) {
+    return this->_pp[2];
   }
   // -- TODO: support more types!
   return 0; // -- Unsupported type

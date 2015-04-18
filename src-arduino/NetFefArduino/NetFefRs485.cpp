@@ -1,13 +1,3 @@
-/*
- * This file is part of the NetFef serial network bus protocol project.
- *
- * Copyright (c) 2015.
- * Author: Balazs Kelemen
- * Contact: prampec+netfef@gmail.com
- *
- * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
- * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
- */
 #include <SoftTimer.h>
 
 #include "NetFefRs485.h"
@@ -28,7 +18,7 @@ void NetFefRs485::begin() {
   this->_serial->begin(9600);
 }
 
-boolean NetFefRs485::_writeFrameCheckCollosion(byte* data, int length) {
+boolean NetFefRs485::_writeFrameCheckCollision(byte* data, int length) {
   if(this->_serial->available()) {
     // -- data on the UART first must be read
 //    error.start(1);
@@ -75,7 +65,7 @@ void NetFefRs485::step(Task* task) {
 
     byte* data = me->_commQueue[0];
     int length = me->_frameSizes[0];
-    if(me->_writeFrameCheckCollosion(data, length)) {
+    if(me->_writeFrameCheckCollision(data, length)) {
       // -- data sent
       for(int i=1; i<me->_queueSize; i++) {
         // -- shift the queue
@@ -141,6 +131,11 @@ byte* NetFefRs485::readFrame() {
     if(i<COMM_DATA_FRAME_LENGTH) {
       this->_readBuffer[i++] = val;
     }
+    int j = 0;
+    while(!this->_serial->available() && j<10) {
+      delay(1);
+      j += 1;
+    }
   }
   return this->_readBuffer;
 }
@@ -150,5 +145,8 @@ boolean NetFefRs485::canSend() {
 }
 
 
+void NetFefRs485::setDebug(Print* print) {
+  this->_debugOut = print;
+}
 void NetFefRs485::_debug(char* message) {
 }

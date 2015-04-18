@@ -12,9 +12,14 @@
 package com.netfef.util;
 
 import com.netfef.protocol.Frame;
+import com.netfef.protocol.NetFef;
+import com.netfef.protocol.Parameter;
+import com.netfef.protocol.ParameterType;
 import com.netfef.rs485.NetFefRs485;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  * <p>Basic test application for the project functionality.</p>
@@ -42,11 +47,35 @@ public class NetFefRs485Tester {
         });
         module.init();
 
-        System.out.println("Started. Press ENTER to exit.");
-        System.in.read();
+        System.out.println("Started. Enter command! Commands are: t, q");
+        readAndProcessCommands(module);
 
         System.out.println("Stopping...");
         module.shutdown();
         System.out.println("Stopped.");
+    }
+
+    private void readAndProcessCommands(NetFefRs485 module) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        char c = 'A';
+        while(true) {
+            String line = br.readLine();
+            if((line == null) || line.startsWith("q")) {
+                return;
+            }
+            if(line.startsWith("t")) {
+                Frame frame = new Frame();
+                frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
+                frame.setCommand(new Parameter('c', ParameterType.CHAR, 't'));
+                frame.addParameter(new Parameter('v', ParameterType.CHAR, String.valueOf(c)));
+                System.out.println("Sending char v=" + c);
+                module.sendData(frame, NetFef.MASTER_ADDRESS);
+
+                c += 1;
+                if(c == 'Z') {
+                    c = 'A';
+                }
+            }
+        }
     }
 }

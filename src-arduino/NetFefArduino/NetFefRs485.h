@@ -1,13 +1,3 @@
-/*
- * This file is part of the NetFef serial network bus protocol project.
- *
- * Copyright (c) 2015.
- * Author: Balazs Kelemen
- * Contact: prampec+netfef@gmail.com
- *
- * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
- * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
- */
 #ifndef NetFefRs485_H
 #define NetFefRs485_H
 
@@ -32,9 +22,10 @@ class NetFefRs485 : public Task
     byte* readFrame();
     void addDataToQueue(NetFefFrameBuilder* frameBuilder);
     boolean canSend();
+    void setDebug(Print* print);
   
   private:
-    boolean _writeFrameCheckCollosion(byte* data, int length);
+    boolean _writeFrameCheckCollision(byte* data, int length);
     static void step(Task* me);
     static void copyDataValues(byte* from, byte* to);
     byte _readBuffer[COMM_DATA_FRAME_LENGTH];
@@ -45,6 +36,7 @@ class NetFefRs485 : public Task
     int _writeEnabledPin;
     HardwareSerial* _serial;
     void _addDataToQueue(byte* data, int length);
+    Print* _debugOut = NULL;
 };
 
 #endif // -- NetFefRs485

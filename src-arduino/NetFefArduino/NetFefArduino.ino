@@ -1,13 +1,3 @@
-/*
- * This file is part of the NetFef serial network bus protocol project.
- *
- * Copyright (c) 2015.
- * Author: Balazs Kelemen
- * Contact: prampec+netfef@gmail.com
- *
- * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
- * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
- */
 /**
  * Two direction communication.
  */
@@ -35,6 +25,7 @@ NetFefRs485 netFefRs485(&Serial, WRITE_ENABLE_PIN);
 
 void setup() {
   netFefRs485.begin();
+  netFefRs485.setDebug(&lcd);
   lcd.begin(16, 2);
   lcd.print("ready");
   SoftTimer.add(&testTask);
@@ -68,15 +59,44 @@ void test(Task* me) {
 
 void readerJob(Task* me) {
   if(netFefRs485.dataAvailable()) {
-    byte* data = netFefRs485.readFrame();
-
-if(data[0] != 0) {
     lcd.setCursor(0,1);
-    lcd.print(data[0]);
-    lcd.setCursor(2,1);
-    lcd.print((unsigned int)data[0]);
-    lcd.print("  ");
-}
+    byte* data = netFefRs485.readFrame();
+    NetFefFrameReader netFefFrameReader = NetFefFrameReader(data);
+    if(netFefFrameReader.isForMe(MYADDRESS)) {
+      byte *p = netFefFrameReader.getCommand();
+      if(p == 0) {
+        lcd.print("Incompatible frame   ");
+        return;
+      }        
+      NetFefParameter parameter = NetFefParameter(p);
+      if(parameter.isType('c')) {
+        char cmd = (char)parameter.getValue1();
+        if(cmd == 't') {
+          p = netFefFrameReader.getParameter('v');
+          if(p == 0) {
+            lcd.print("Incompatible frame   ");
+            return;
+          }        
+          parameter = NetFefParameter(p);
+          char v = (char)parameter.getValue1();
+          
+          lcd.print("Received(");
+          lcd.print(cmd);
+          lcd.print(") v=");
+          lcd.print(v);
+          lcd.print("  ");
+        } else {
+          lcd.print("Received(");
+          lcd.print(cmd);
+          lcd.print(")");
+          lcd.print("    ");
+        }
+      } else {
+        lcd.print("Unknown command type   ");
+      }
+    } else {
+      lcd.print("Not for me     ");
+    }
   }
 }
 
