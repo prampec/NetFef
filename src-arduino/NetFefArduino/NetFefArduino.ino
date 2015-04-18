@@ -54,7 +54,7 @@ void test(Task* me) {
     counter = FIRST_CHAR;
   }
 
-  me->setPeriodMs( random(WRITE_DELAY_MS_MAX) + COLLOSION_PENALTY_MS );
+  me->setPeriodMs( random(WRITE_DELAY_MS_MAX) + MINIMAL_FRAME_SPACING_MS );
 }
 
 void readerJob(Task* me) {

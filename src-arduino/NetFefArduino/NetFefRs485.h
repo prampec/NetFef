@@ -6,7 +6,7 @@
 
 #include "NetFef.h"
 
-#define COLLOSION_PENALTY_MS 100
+#define MINIMAL_FRAME_SPACING_MS 100
 #define COMM_QUEUE_LENGTH 5
 #define COMM_DATA_FRAME_LENGTH 50
 //#define COMM_DATA_FRAME 1

@@ -39,7 +39,7 @@ boolean NetFefRs485::_writeFrameCheckCollision(byte* data, int length) {
     }
     byte b = this->_serial->read();
     if(b != val) {
-      // -- collosion detected
+      // -- collision detected
 //      error.start(3);
       this->_debug("echo missmatch");
       digitalWrite(this->_writeEnabledPin, LOW);
@@ -74,10 +74,10 @@ void NetFefRs485::step(Task* task) {
       }
       me->_queueSize -= 1;
     } else {
-      // -- collosion or other problem detected
+      // -- collision or other problem detected
     }
     // -- Wait after write or error.
-    me->setPeriodMs( random(COLLOSION_PENALTY_MS) + COLLOSION_PENALTY_MS );
+    me->setPeriodMs( random(MINIMAL_FRAME_SPACING_MS) + MINIMAL_FRAME_SPACING_MS );
 digitalWrite(13, LOW);
 }
 
