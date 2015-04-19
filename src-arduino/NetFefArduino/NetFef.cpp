@@ -50,12 +50,40 @@ int NetFefFrameBuilder::getFrameLength() {
 void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, char* value) {
   this->_addByte(parameterName);
   this->_addByte(parameterType);
-  if(parameterType == 'c') {
+  if(
+    (parameterType == 'c')
+    || (parameterType == 'B')
+    || (parameterType == 'b')
+    ) {
     this->_addByte(*value);
   }
-  // -- TODO: handle more types
+  else if(parameterType == 's') {
+    int len = strlen(value) + 1;
+    this->_addByte(len);
+  // -- TODO: may add some check to prevent buffer overflow
+    strcpy((char*)this->_bytes+this->_pos, value);
+    this->_pos += len;
+  }
+  else if(parameterType == 'S') {
+    int len = strlen(value) + 1;
+    this->_addInt2(len);
+    // -- TODO: may add some check to prevent buffer overflow
+    strcpy((char*)this->_bytes+this->_pos, value);
+    this->_pos += len;
+  }
   
   this->_bytes[this->_paramCountPos] += 1;
+}
+
+void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
+  this->_addByte(parameterName);
+  this->_addByte(parameterType);
+  if(parameterType == 'b') {
+    this->_addByte(value);
+  }
+  else if(parameterType == 'i') {
+    this->_addInt2(value);
+  }
 }
 
 void NetFefFrameBuilder::_addByte(byte value) {
@@ -63,7 +91,7 @@ void NetFefFrameBuilder::_addByte(byte value) {
   this->_bytes[this->_pos++] = value;
 }
 
-void NetFefFrameBuilder::_addInt2(int value) {
+void NetFefFrameBuilder::_addInt2(unsigned int value) {
   int upper = value / 255;
   // -- TODO: may add some check to prevent buffer overflow
   this->_bytes[this->_pos++] = upper;
@@ -129,21 +157,60 @@ NetFefParameter::NetFefParameter(byte* parameterPointer) {
 }
 
 int NetFefParameter::calculateSpace() {
-  if(this->isType('c')) {
+  if(
+    this->isType('c')
+    || this->isType('B')
+    || this->isType('b')
+  ) {
     return 3;
   }
-  // -- TODO: support more types!
+  else if(this->isType('i')) {
+    return 4;
+  }
+  else if(this->isType('s')) {
+    return 2 + this->_pp[2];
+  }
+  else if(this->isType('s')) {
+    return 2 + this->_pp[2]*255 + this->_pp[3];
+  }
+
   return -1; // -- Unsupported type
 }
 
 boolean NetFefParameter::isType(char parameterType) {
   return this->_pp[1] == parameterType;
 }
-byte NetFefParameter::getValue1() {
+boolean NetFefParameter::getBooleanValue() {
+  if(this->isType('B')) {
+    return this->_pp[2];
+  }
+  return 0; // -- Unsupported type
+}
+byte NetFefParameter::getByteValue() {
+  if(this->isType('b')) {
+    return this->_pp[2];
+  }
+  return 0; // -- Unsupported type
+}
+unsigned int NetFefParameter::getIntValue() {
+  if(this->isType('i')) {
+    return this->_pp[2]*255 + this->_pp[3];
+  }
+  return 0; // -- Unsupported type
+}
+char NetFefParameter::getCharValue() {
   if(this->isType('c')) {
     return this->_pp[2];
   }
-  // -- TODO: support more types!
+  return 0; // -- Unsupported type
+}
+char* NetFefParameter::getStringValue() {
+  if(this->isType('s')) {
+    return (char*)this->_pp + 3;
+  }
+  else if(this->isType('S')) {
+    return (char*)this->_pp + 4;
+  }
   return 0; // -- Unsupported type
 }
 

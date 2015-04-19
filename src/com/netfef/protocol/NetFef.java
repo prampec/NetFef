@@ -92,15 +92,27 @@ public class NetFef {
 
         Parameter parameter = new Parameter(parameterName, parameterType);
 
-        if(parameterType == ParameterType.CHAR) {
+        if(parameterType == ParameterType.BOOLEAN) {
+            boolean value = bar.readChar() != 0;
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.UNSIGNED_SHORT) {
+            int value = bar.readChar();
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.INTEGER) {
+            int value = (int)bar.readByte() * 255 + bar.readByte();
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.CHAR) {
             char value = bar.readChar();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.STRING1) {
             int length = bar.readInt1();
             String value = bar.readString(length);
             parameter.setValue(value);
+        } else if(parameterType == ParameterType.STRING2) {
+            int length = bar.readInt2();
+            String value = bar.readString(length);
+            parameter.setValue(value);
         }
-        // -- TODO: implement other types
 
         return parameter;
     }
@@ -122,7 +134,7 @@ public class NetFef {
             buildParameterBytes(bab, parameter);
         }
 
-        bab.insert2(bab.getSize()+2);
+        bab.append2(bab.getSize() + 2);
 
         return bab.getBytes();
     }
@@ -130,14 +142,26 @@ public class NetFef {
     private static ByteArrayBuilder buildParameterBytes(ByteArrayBuilder bab, Parameter parameter) {
         bab.append(parameter.getParameterName());
         bab.append(parameter.getParameterType().getVisual());
-        if(parameter.getParameterType() == ParameterType.CHAR) {
+        if(parameter.getParameterType() == ParameterType.BOOLEAN) {
+            bab.append(parameter.getBooleanValue() ? '1' : '0');
+        } else if(parameter.getParameterType() == ParameterType.UNSIGNED_SHORT) {
+            bab.append1(parameter.getIntValue());
+        } else if(parameter.getParameterType() == ParameterType.INTEGER) {
+            bab.append2(parameter.getIntValue());
+        } else if(parameter.getParameterType() == ParameterType.CHAR) {
             bab.append(parameter.getStringValue().getBytes());
         } else if(parameter.getParameterType() == ParameterType.STRING1) {
-            bab.append1(parameter.getStringValue().length());
-            bab.append(parameter.getStringValue().getBytes());
+            String stringValue = parameter.getStringValue();
+            bab.append1(stringValue.length());
+            bab.append(stringValue.getBytes());
+            bab.append('\0');
+        } else if(parameter.getParameterType() == ParameterType.STRING2) {
+            String stringValue = parameter.getStringValue();
+            bab.append2(stringValue.length());
+            bab.append(stringValue.getBytes());
             bab.append('\0');
         }
-        // -- TODO: implement other types
+
         return bab;
     }
 

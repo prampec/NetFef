@@ -47,7 +47,7 @@ public class NetFefRs485Tester {
         });
         module.init();
 
-        System.out.println("Started. Enter command! Commands are: t, q");
+        System.out.println("Started. Enter command! Commands are: c, s, q");
         readAndProcessCommands(module);
 
         System.out.println("Stopping...");
@@ -63,12 +63,26 @@ public class NetFefRs485Tester {
             if((line == null) || line.startsWith("q")) {
                 return;
             }
-            if(line.startsWith("t")) {
+            if(line.startsWith("c")) {
                 Frame frame = new Frame();
                 frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
-                frame.setCommand(new Parameter('c', ParameterType.CHAR, 't'));
+                frame.setCommand('t');
                 frame.addParameter(new Parameter('v', ParameterType.CHAR, String.valueOf(c)));
                 System.out.println("Sending char v=" + c);
+                module.sendData(frame, NetFef.MASTER_ADDRESS);
+
+                c += 1;
+                if(c == 'Z') {
+                    c = 'A';
+                }
+            }
+            if(line.startsWith("s")) {
+                Frame frame = new Frame();
+                frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
+                frame.setCommand('T');
+                String value = "x" + String.valueOf(c) + "x";
+                frame.addParameter(new Parameter('v', ParameterType.STRING1, value));
+                System.out.println("Sending string v=" + value);
                 module.sendData(frame, NetFef.MASTER_ADDRESS);
 
                 c += 1;

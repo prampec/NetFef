@@ -77,8 +77,7 @@ public class ByteArrayBuilder {
             return appendNull();
         int len = toAppend.length;
         ensureCapacityForLength(count + len);
-        byte[] source = toAppend;
-        System.arraycopy(source, 0, value, count, len);
+        System.arraycopy(toAppend, 0, value, count, len);
         count += len;
         return this;
     }
@@ -105,7 +104,7 @@ public class ByteArrayBuilder {
         return count;
     }
 
-    public ByteArrayBuilder insert2(int toAppend) {
+    public ByteArrayBuilder append2(int toAppend) {
 //        if (str == null)
 //            return appendNull();
         int len = 2;

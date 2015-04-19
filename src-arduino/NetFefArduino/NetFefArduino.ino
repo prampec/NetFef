@@ -80,7 +80,7 @@ void readerJob(Task* me) {
       }        
       NetFefParameter parameter = NetFefParameter(p);
       if(parameter.isType('c')) {
-        char cmd = (char)parameter.getValue1();
+        char cmd = (char)parameter.getCharValue();
         if(cmd == 't') {
           p = netFefFrameReader.getParameter('v');
           if(p == 0) {
@@ -88,12 +88,27 @@ void readerJob(Task* me) {
             return;
           }        
           parameter = NetFefParameter(p);
-          char v = (char)parameter.getValue1();
+          char v = (char)parameter.getCharValue();
           
-          lcd.print("Received(");
+          lcd.print("(");
           lcd.print(cmd);
           lcd.print(") v=");
           lcd.print(v);
+          lcd.print("  ");
+        }
+        else if(cmd == 'T') {
+          p = netFefFrameReader.getParameter('v');
+          if(p == 0) {
+            lcd.print("Incompatible frame   ");
+            return;
+          }        
+          parameter = NetFefParameter(p);
+          char* s = parameter.getStringValue();
+          
+          lcd.print("(");
+          lcd.print(cmd);
+          lcd.print(") v=");
+          lcd.print(s);
           lcd.print("  ");
         } else {
           lcd.print("Received(");

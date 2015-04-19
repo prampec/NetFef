@@ -26,7 +26,7 @@ public class Frame {
     byte[] targetAddress;
     byte[] senderAddress;
     Parameter command;
-    Map<Character, Parameter> parameters = new HashMap<Character, Parameter>();
+    Map<Character, Parameter> parameters = new HashMap<>();
 
     public byte[] getTargetAddress() {
         return targetAddress;
@@ -52,12 +52,12 @@ public class Frame {
         this.command = command;
     }
 
-    Map<Character, Parameter> getParameters() {
-        return parameters;
+    public void setCommand(char cmd) {
+        this.setCommand(new Parameter('c', ParameterType.CHAR, cmd));
     }
 
-    void setParameters(Map<Character, Parameter> parameters) {
-        this.parameters = parameters;
+    Map<Character, Parameter> getParameters() {
+        return parameters;
     }
 
     @Override

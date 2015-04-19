@@ -36,6 +36,7 @@ public class NetFefRs485 {
 
     public static final Pin WRITE_ENABLED_PIN = RaspiPin.GPIO_01;
     public static final int MINIMAL_FRAME_SPACING_MS = 100;
+    public static final int COLLISION_PENALTY_MAX_MS = 300;
     private static final int MAX_LEN = 1024;
     private static final long WAIT_TIMEOUT = 200;
     private GpioPinDigitalOutput writeEnablePin;
@@ -84,13 +85,20 @@ public class NetFefRs485 {
         sendThread = new Thread(() -> {
             while(NetFefRs485.this.running) {
                 byte[] bytes = sendQueue.peek();
+                boolean hasCollision = false;
                 if(bytes != null) {
                     if(NetFefRs485.this.sendDataCheckCollision(bytes)) {
                         sendQueue.remove();
+                    } else {
+                        hasCollision = true;
                     }
                 }
                 try {
-                    Thread.sleep(MINIMAL_FRAME_SPACING_MS + random.nextInt(MINIMAL_FRAME_SPACING_MS));
+                    int millis = MINIMAL_FRAME_SPACING_MS;
+                    if(hasCollision) {
+                        millis += random.nextInt(COLLISION_PENALTY_MAX_MS);
+                    }
+                    Thread.sleep(millis);
                 }
                 catch (InterruptedException e) {
                     LOG.error("Interrupted", e);

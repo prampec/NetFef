@@ -20,6 +20,7 @@ class NetFefFrameBuilder {
   public:
     NetFefFrameBuilder(byte* buffer, const byte* myAddress, const byte* targetAddress, char command);
     void addParameter(char parameterName, char parameterType, char* value);
+    void addParameter(char parameterName, char parameterType, unsigned int value);
     byte* getFrameBytes();
     int getFrameLength();
     
@@ -28,7 +29,7 @@ class NetFefFrameBuilder {
     int _pos;
     int _paramCountPos;
     void _addByte(byte value);
-    void _addInt2(int value);
+    void _addInt2(unsigned int value);
 };
 
 class NetFefFrameReader {
@@ -54,7 +55,11 @@ class NetFefParameter {
     NetFefParameter(byte* parameterPointer);
     int calculateSpace();
     boolean isType(char parameterType);
-    byte getValue1();
+    boolean getBooleanValue();
+    byte getByteValue();
+    unsigned int getIntValue();
+    char getCharValue();
+    char* getStringValue();
     
   private:
     byte* _pp;

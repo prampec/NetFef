@@ -17,11 +17,12 @@ package com.netfef.protocol;
  * <br/>Date: 4/8/15</p>
  */
 public class Parameter {
-    char parameterName;
-    ParameterType parameterType;
-    Integer length;
-    String stringValue;
-    Integer intValue;
+    private char parameterName;
+    private ParameterType parameterType;
+    private Integer length;
+    private String stringValue;
+    private Integer intValue;
+    private boolean booleanValue;
 
     public Parameter(char parameterName, ParameterType parameterType, char value) {
         this.parameterName = parameterName;
@@ -60,6 +61,10 @@ public class Parameter {
         return intValue;
     }
 
+    public boolean getBooleanValue() {
+        return booleanValue;
+    }
+
     @Override
     public String toString() {
         return String.valueOf(parameterName) + "(" + parameterType.getVisual() + ")" + stringValue;
@@ -75,5 +80,14 @@ public class Parameter {
 
     public void setValue(String value) {
         this.stringValue = value;
+    }
+
+    public void setValue(boolean value) {
+        this.booleanValue = value;
+        this.stringValue = String.valueOf(value);
+    }
+    public void setValue(int value) {
+        this.intValue = value;
+        this.stringValue = String.valueOf(value);
     }
 }
