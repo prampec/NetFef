@@ -41,7 +41,7 @@ public class ByteArrayReader {
 
 
     public static int getInt2(byte byte0, byte byte1) {
-        int retVal = byte0*255 + byte1;
+        int retVal = (int)byte0*255 + byte1;
         return retVal;
     }
 
@@ -61,5 +61,14 @@ public class ByteArrayReader {
         }
         readByte(); // -- String should end with '\0'
         return sb.toString();
+    }
+
+    public long readInt4() {
+        return readInt4(readByte(), readByte(), readByte(), readByte());
+    }
+
+    private long readInt4(byte b0, byte b1, byte b2, byte b3) {
+        long retVal = (long)b0 | b1<<8 | b2<<16 | b3 <<24;
+        return retVal;
     }
 }

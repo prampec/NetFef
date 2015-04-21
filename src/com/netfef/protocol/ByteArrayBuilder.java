@@ -61,10 +61,34 @@ public class ByteArrayBuilder {
     }
 
     public static byte[] toBytes2(int value) {
+        int neg = 0;
+        if(value < 0) {
+            neg = 128;
+            value = -value;
+            value -= 1;
+            value ^= 65535;
+        }
         byte[] bytes = new byte[2];
-        int x = value / 255;
-        bytes[0] = (byte)x;
-        bytes[1] = (byte)(value - x*255);
+        int x = value >> 8;
+        bytes[0] = (byte)(x | neg);
+        bytes[1] = (byte)(value & 255);
+        return bytes;
+    }
+
+    private byte[] toBytes4(long value) {
+        long neg = 0;
+        if(value < 0) {
+            neg = 128L;
+            value = -value;
+            value -= 1;
+            value ^= 4294967295L;
+        }
+        byte[] bytes = new byte[4];
+        long x = value >> 24;
+        bytes[0] = (byte)(x | neg);
+        bytes[1] = (byte)(value >> 16);
+        bytes[2] = (byte)(value >> 8);
+        bytes[3] = (byte)(value & 255);
         return bytes;
     }
 
@@ -104,15 +128,23 @@ public class ByteArrayBuilder {
         return count;
     }
 
-    public ByteArrayBuilder append2(int toAppend) {
-//        if (str == null)
-//            return appendNull();
+    public ByteArrayBuilder insertToBeginning(int toAppend) {
         int len = 2;
         ensureCapacityForLength(count + len);
         byte[] source = toBytes2(toAppend);
         System.arraycopy(value, 0, value, len, count);
         System.arraycopy(source, 0, value, 0, len);
         count += len;
+        return this;
+    }
+
+    public ByteArrayBuilder append2(int toAppend) {
+        this.append(toBytes2(toAppend));
+        return this;
+    }
+
+    public ByteArrayBuilder append4(long toAppend) {
+        this.append(toBytes4(toAppend));
         return this;
     }
 }

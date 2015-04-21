@@ -38,7 +38,7 @@ void setup() {
   netFefRs485.setDebug(&lcd);
   lcd.begin(16, 2);
   lcd.print("ready");
-  SoftTimer.add(&testTask);
+//  SoftTimer.add(&testTask);
   SoftTimer.add(&readTask);
   pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(LCD_BACKLIGHT_PIN, LOW); // -- Turn on LCD backlight
@@ -56,6 +56,7 @@ void test(Task* me) {
   }
   lcd.print("Sending ");
   lcd.print(counter);
+  lcd.print("   ");
   frameBuilder.addParameter('v', 'c', &counter);
   netFefRs485.addDataToQueue(&frameBuilder);
 
@@ -72,56 +73,64 @@ void readerJob(Task* me) {
     lcd.setCursor(0,1);
     byte* data = netFefRs485.readFrame();
     NetFefFrameReader netFefFrameReader = NetFefFrameReader(data);
+//netFefFrameReader._debug = &lcd;
     if(netFefFrameReader.isForMe(MYADDRESS)) {
+      lcd.print(">");
       byte *p = netFefFrameReader.getCommand();
-      if(p == 0) {
-        lcd.print("Incompatible frame   ");
-        return;
-      }        
-      NetFefParameter parameter = NetFefParameter(p);
-      if(parameter.isType('c')) {
-        char cmd = (char)parameter.getCharValue();
-        if(cmd == 't') {
-          p = netFefFrameReader.getParameter('v');
-          if(p == 0) {
-            lcd.print("Incompatible frame   ");
-            return;
-          }        
-          parameter = NetFefParameter(p);
-          char v = (char)parameter.getCharValue();
-          
-          lcd.print("(");
-          lcd.print(cmd);
-          lcd.print(") v=");
-          lcd.print(v);
-          lcd.print("  ");
-        }
-        else if(cmd == 'T') {
-          p = netFefFrameReader.getParameter('v');
-          if(p == 0) {
-            lcd.print("Incompatible frame   ");
-            return;
-          }        
-          parameter = NetFefParameter(p);
-          char* s = parameter.getStringValue();
-          
-          lcd.print("(");
-          lcd.print(cmd);
-          lcd.print(") v=");
-          lcd.print(s);
-          lcd.print("  ");
-        } else {
-          lcd.print("Received(");
-          lcd.print(cmd);
-          lcd.print(")");
-          lcd.print("    ");
-        }
-      } else {
-        lcd.print("Unknown command type   ");
+      while(p != 0) {
+        printParameter(p);
+        p = netFefFrameReader.getNextParameter(p);
       }
+      lcd.print("  ");
     } else {
       lcd.print("Not for me     ");
     }
   }
 }
 
+void printParameter(byte* p) {
+  if(p == 0) {
+    lcd.print("Incompatible frame   ");
+    return;
+  }
+  NetFefParameter parameter = NetFefParameter(p);
+//parameter._debug = &lcd;
+
+//  lcd.print(parameter.getName());
+//  lcd.print('(');
+  lcd.print(parameter.getType());
+//  lcd.print(")=");
+  lcd.print(":");
+  if(parameter.isType('c')) {
+    char v = parameter.getCharValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('B') || parameter.isType('b')) {
+    byte v = parameter.getByteValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('i')) {
+    unsigned int v = parameter.getIntValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('I')) {
+    int v = parameter.getSignedIntValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('l')) {
+    unsigned long v = parameter.getLongValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('L')) {
+    long v = parameter.getLongValue();
+    lcd.print(v);
+  }
+  else if(parameter.isType('s') || parameter.isType('S')) {
+    char* v = parameter.getStringValue();
+    lcd.print(v);
+  }
+  else {
+    lcd.print('?');
+  }
+  lcd.print(' ');
+}

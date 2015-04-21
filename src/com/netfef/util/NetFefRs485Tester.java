@@ -47,7 +47,7 @@ public class NetFefRs485Tester {
         });
         module.init();
 
-        System.out.println("Started. Enter command! Commands are: c, s, q");
+        System.out.println("Started. Enter command! Commands are: B, b, i, I, l, L, c, s, S, q");
         readAndProcessCommands(module);
 
         System.out.println("Stopping...");
@@ -62,33 +62,68 @@ public class NetFefRs485Tester {
             String line = br.readLine();
             if((line == null) || line.startsWith("q")) {
                 return;
-            }
-            if(line.startsWith("c")) {
+            } else {
                 Frame frame = new Frame();
                 frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
                 frame.setCommand('t');
-                frame.addParameter(new Parameter('v', ParameterType.CHAR, String.valueOf(c)));
-                System.out.println("Sending char v=" + c);
+
+                for (byte b : line.getBytes()) {
+                    Parameter v = null;
+                    char p = (char)b;
+                    if(p == 'c') {
+                        v = new Parameter(c, ParameterType.CHAR, String.valueOf(c));
+                        System.out.println("Sending char " + c + "=" + c);
+                    } else if(p == 'B') {
+                        boolean value = c % 2 == 0;
+                        v = new Parameter(c, ParameterType.BOOLEAN);
+                        v.setValue(value);
+                        System.out.println("Sending boolean " + c + "=" + value);
+                    } else if(p == 'b') {
+                        byte value = (byte)c;
+                        v = new Parameter(c, ParameterType.BYTE);
+                        v.setValue(value);
+                        System.out.println("Sending byte " + c + "=" + value);
+                    } else if(p == 'i') {
+                        int value = (int)c * 63;
+                        v = new Parameter(c, ParameterType.INTEGER);
+                        v.setValue(value);
+                        System.out.println("Sending int " + c + "=" + value);
+                    } else if(p == 'I') {
+                        int value = -(int)c * 37;
+                        v = new Parameter(c, ParameterType.SIGNED_INTEGER);
+                        v.setValue(value);
+                        System.out.println("Sending signed int " + c + "=" + value);
+                    } else if(p == 'l') {
+                        long value = (int)c * 2345;
+                        v = new Parameter(c, ParameterType.LONG);
+                        v.setValue(value);
+                        System.out.println("Sending long " + c + "=" + value);
+                    } else if(p == 'L') {
+                        long value = -(int)c * 2345;
+                        v = new Parameter(c, ParameterType.SIGNED_LONG);
+                        v.setValue(value);
+                        System.out.println("Sending signed long " + c + "=" + value);
+                    } else if(p == 's') {
+                        String value = "x" + String.valueOf(c) + "x";
+                        v = new Parameter(c, ParameterType.STRING1, value);
+                        System.out.println("Sending string " + c + "=" + value);
+                    } else if(p == 'S') {
+                        String value = "Xx" + String.valueOf(c) + "xX";
+                        v = new Parameter(c, ParameterType.STRING2, value);
+                        System.out.println("Sending string " + c + "=" + value);
+                    }
+
+                    if(v != null) {
+                        frame.addParameter(v);
+
+                        c += 1;
+                        if(c == 'Z') {
+                            c = 'A';
+                        }
+                    }
+                }
                 module.sendData(frame, NetFef.MASTER_ADDRESS);
 
-                c += 1;
-                if(c == 'Z') {
-                    c = 'A';
-                }
-            }
-            if(line.startsWith("s")) {
-                Frame frame = new Frame();
-                frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
-                frame.setCommand('T');
-                String value = "x" + String.valueOf(c) + "x";
-                frame.addParameter(new Parameter('v', ParameterType.STRING1, value));
-                System.out.println("Sending string v=" + value);
-                module.sendData(frame, NetFef.MASTER_ADDRESS);
-
-                c += 1;
-                if(c == 'Z') {
-                    c = 'A';
-                }
             }
         }
     }

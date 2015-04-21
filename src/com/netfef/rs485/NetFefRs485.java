@@ -74,7 +74,10 @@ public class NetFefRs485 {
                 // -- A valid frame is at least 12 byte long.
                 return;
             }
-            LOG.trace("Bytes received: " + FormatHelper.byteArrayToString(bytes));
+            if(LOG.isTraceEnabled()) {
+                LOG.trace("Bytes received: " + FormatHelper.byteArrayToString(bytes));
+            }
+//            System.out.println("Bytes received: " + FormatHelper.byteArrayToString(bytes));
             Frame frame = NetFef.buildFrameObject(bytes, MAX_LEN, NetFef.MASTER_ADDRESS);
             listener.dataReceived(frame);
         };

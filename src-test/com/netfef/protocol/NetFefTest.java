@@ -34,6 +34,16 @@ public class NetFefTest {
         frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
         frame.setCommand(new Parameter('c', ParameterType.CHAR, 't'));
         frame.addParameter(new Parameter('t', ParameterType.STRING1, "s123456789"));
+        {
+            Parameter p = new Parameter('b', ParameterType.SIGNED_INTEGER);
+            p.setValue(-12345);
+            frame.addParameter(p);
+        }
+        {
+            Parameter p = new Parameter('a', ParameterType.SIGNED_LONG);
+            p.setValue(-1234567890L);
+            frame.addParameter(p);
+        }
         byte[] bytes = NetFef.buildFrameBytes(frame, NetFef.MASTER_ADDRESS);
     }
 

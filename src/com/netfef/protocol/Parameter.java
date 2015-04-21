@@ -23,6 +23,7 @@ public class Parameter {
     private String stringValue;
     private Integer intValue;
     private boolean booleanValue;
+    private long longValue;
 
     public Parameter(char parameterName, ParameterType parameterType, char value) {
         this.parameterName = parameterName;
@@ -65,6 +66,10 @@ public class Parameter {
         return booleanValue;
     }
 
+    public Long getLongValue() {
+        return longValue;
+    }
+
     @Override
     public String toString() {
         return String.valueOf(parameterName) + "(" + parameterType.getVisual() + ")" + stringValue;
@@ -88,6 +93,11 @@ public class Parameter {
     }
     public void setValue(int value) {
         this.intValue = value;
+        this.longValue = value;
+        this.stringValue = String.valueOf(value);
+    }
+    public void setValue(long value) {
+        this.longValue = value;
         this.stringValue = String.valueOf(value);
     }
 }

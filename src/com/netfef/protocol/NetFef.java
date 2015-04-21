@@ -95,11 +95,28 @@ public class NetFef {
         if(parameterType == ParameterType.BOOLEAN) {
             boolean value = bar.readChar() != 0;
             parameter.setValue(value);
-        } else if(parameterType == ParameterType.UNSIGNED_SHORT) {
+        } else if(parameterType == ParameterType.BYTE) {
             int value = bar.readChar();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.INTEGER) {
-            int value = (int)bar.readByte() * 255 + bar.readByte();
+            int value = bar.readInt2();
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.SIGNED_INTEGER) {
+            int value = bar.readInt2();
+            if((value & (0x1<<15)) > 0) {
+                value ^= 0x1<<15;
+                value = -value;
+            }
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.LONG) {
+            long value = bar.readInt4();
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.SIGNED_LONG) {
+            long value = bar.readInt4();
+            if((value & (0x1<<31)) > 0) {
+                value ^= 0x1<<31;
+                value = -value;
+            }
             parameter.setValue(value);
         } else if(parameterType == ParameterType.CHAR) {
             char value = bar.readChar();
@@ -134,32 +151,41 @@ public class NetFef {
             buildParameterBytes(bab, parameter);
         }
 
-        bab.append2(bab.getSize() + 2);
+        bab.insertToBeginning(bab.getSize() + 2);
 
         return bab.getBytes();
     }
 
     private static ByteArrayBuilder buildParameterBytes(ByteArrayBuilder bab, Parameter parameter) {
         bab.append(parameter.getParameterName());
-        bab.append(parameter.getParameterType().getVisual());
-        if(parameter.getParameterType() == ParameterType.BOOLEAN) {
+        ParameterType parameterType = parameter.getParameterType();
+        bab.append(parameterType.getVisual());
+        if(parameterType == ParameterType.BOOLEAN) {
             bab.append(parameter.getBooleanValue() ? '1' : '0');
-        } else if(parameter.getParameterType() == ParameterType.UNSIGNED_SHORT) {
+        } else if(parameterType == ParameterType.BYTE) {
             bab.append1(parameter.getIntValue());
-        } else if(parameter.getParameterType() == ParameterType.INTEGER) {
+        } else if(parameterType == ParameterType.INTEGER) {
             bab.append2(parameter.getIntValue());
-        } else if(parameter.getParameterType() == ParameterType.CHAR) {
+        } else if(parameterType == ParameterType.SIGNED_INTEGER) {
+            bab.append2(parameter.getIntValue());
+        } else if(parameterType == ParameterType.LONG) {
+            bab.append4(parameter.getLongValue());
+        } else if(parameterType == ParameterType.SIGNED_LONG) {
+            bab.append4(parameter.getLongValue());
+        } else if(parameterType == ParameterType.CHAR) {
             bab.append(parameter.getStringValue().getBytes());
-        } else if(parameter.getParameterType() == ParameterType.STRING1) {
+        } else if(parameterType == ParameterType.STRING1) {
             String stringValue = parameter.getStringValue();
-            bab.append1(stringValue.length());
+            bab.append1(stringValue.length() + 1);
             bab.append(stringValue.getBytes());
             bab.append('\0');
-        } else if(parameter.getParameterType() == ParameterType.STRING2) {
+        } else if(parameterType == ParameterType.STRING2) {
             String stringValue = parameter.getStringValue();
-            bab.append2(stringValue.length());
+            bab.append2(stringValue.length() + 1);
             bab.append(stringValue.getBytes());
             bab.append('\0');
+        } else {
+            throw new UnsupportedOperationException("Parameter type " + parameterType + " is not implemented.");
         }
 
         return bab;

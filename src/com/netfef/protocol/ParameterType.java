@@ -23,9 +23,15 @@ import java.util.Map;
 public enum ParameterType {
     BOOLEAN('B'),
     /** 8 bit unsigned number */
-    UNSIGNED_SHORT('b'),
+    BYTE('b'),
     /** 16 bit unsigned number */
     INTEGER('i'),
+    /** 16 bit signed number */
+    SIGNED_INTEGER('I'),
+    /** 32 bit unsigned number */
+    LONG('l'),
+    /** 32 bit signed number */
+    SIGNED_LONG('L'),
     CHAR('c'),
     /** String with followed by 1 byte of length. */
     STRING1('s'),
@@ -46,7 +52,7 @@ public enum ParameterType {
     private static final Map<Character, ParameterType> byVisualMap;
 
     static {
-        Map<Character, ParameterType> tempMap = new HashMap<Character, ParameterType>();
+        Map<Character, ParameterType> tempMap = new HashMap<>();
         for (ParameterType parameterType : ParameterType.values()) {
             tempMap.put(parameterType.visual, parameterType);
         }
