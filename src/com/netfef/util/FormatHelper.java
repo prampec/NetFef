@@ -37,12 +37,37 @@ public class FormatHelper {
         return sb.toString();
     }
 
+    public static String byteArrayToString2(byte[] array) {
+        StringBuilder sb = new StringBuilder(3*array.length +10);
+//        sb.append("(").append(array.length).append(")");
+        sb.append("{");
+
+        boolean first = true;
+        for (byte b : array) {
+            if(!first) {
+                sb.append(", ");
+            } else {
+                first = false;
+            }
+            sb.append("0x").append(toHexString2(b));
+        }
+        sb.append("}");
+
+        return sb.toString();
+    }
+
     public static String toHexString(byte aByte) {
         String str = Integer.toHexString(byteToInt(aByte));
         String s = str.length() == 1 ? "0" + str : str;
         if((aByte >= ' ') && (aByte <= '~')) {
             s = s + "(" + (char)aByte + ")";
         }
+        return s;
+
+    }
+    public static String toHexString2(byte aByte) {
+        String str = Integer.toHexString(byteToInt(aByte));
+        String s = str.length() == 1 ? "0" + str : str;
         return s;
 
     }

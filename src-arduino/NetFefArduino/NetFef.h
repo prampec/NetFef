@@ -26,6 +26,7 @@ class NetFefFrameBuilder {
     void addParameter(char parameterName, char parameterType, long value);
     byte* getFrameBytes();
     int getFrameLength();
+    Print* _debug = NULL;
     
   private:
     byte* _bytes;

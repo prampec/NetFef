@@ -84,10 +84,11 @@ void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, un
   else if((parameterType == 'i') || (parameterType == 'I')) {
     this->_addInt2(value);
   }
+  this->_bytes[this->_paramCountPos] += 1;
 }
 
 void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, int value) {
-  this->addParameter(parameterName, 'I', value);
+  this->addParameter(parameterName, 'I', (unsigned int)value);
 }
 
 void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
@@ -96,14 +97,16 @@ void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, un
   if((parameterType == 'l') || (parameterType == 'L')) {
     this->_addInt4(value);
   }
+  this->_bytes[this->_paramCountPos] += 1;
 }
 
 void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, long value) {
-  this->addParameter(parameterName, 'L', value);
+  this->addParameter(parameterName, 'L', (unsigned long)value);
 }
 
 void NetFefFrameBuilder::_addByte(byte value) {
   // -- TODO: may add some check to prevent buffer overflow
+if(this->_debug != NULL) { this->_debug->print(this->_pos); this->_debug->print('-'); this->_debug->print(value, HEX); this->_debug->print(' '); }
   this->_bytes[this->_pos++] = value;
 }
 

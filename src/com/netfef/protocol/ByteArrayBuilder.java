@@ -147,4 +147,9 @@ public class ByteArrayBuilder {
         this.append(toBytes4(toAppend));
         return this;
     }
+
+    public void clear() {
+        value = new byte[10];
+        count = 0;
+    }
 }

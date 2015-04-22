@@ -22,7 +22,8 @@
 #define FIRST_CHAR 'A'
 #define LAST_CHAR FIRST_CHAR + 25
 
-#define WRITE_DELAY_MS_MAX 100
+//#define WRITE_DELAY_MS_MAX 100
+#define WRITE_DELAY_MS_MAX 2000
 #define WRITE_ENABLE_PIN 2
 #define LCD_BACKLIGHT_PIN 10
 
@@ -38,7 +39,7 @@ void setup() {
   netFefRs485.setDebug(&lcd);
   lcd.begin(16, 2);
   lcd.print("ready");
-//  SoftTimer.add(&testTask);
+  SoftTimer.add(&testTask);
   SoftTimer.add(&readTask);
   pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(LCD_BACKLIGHT_PIN, LOW); // -- Turn on LCD backlight
@@ -57,7 +58,17 @@ void test(Task* me) {
   lcd.print("Sending ");
   lcd.print(counter);
   lcd.print("   ");
-  frameBuilder.addParameter('v', 'c', &counter);
+  char sbuf[10];
+  sprintf(sbuf, "aa%dbb", counter);
+//frameBuilder._debug = &lcd;
+
+  frameBuilder.addParameter('a', 'c', &counter);
+  frameBuilder.addParameter('b', 's', sbuf);
+  frameBuilder.addParameter('d', 'S', sbuf);
+  frameBuilder.addParameter('e', 'i', (unsigned int)123 * counter);
+  frameBuilder.addParameter('f', 'I', -125 * counter);
+  frameBuilder.addParameter('g', 'l', (unsigned long)12345 * counter);
+  frameBuilder.addParameter('h', 'L', -12345L * counter);
   netFefRs485.addDataToQueue(&frameBuilder);
 
   counter += 1;

@@ -11,6 +11,7 @@
 
 package com.netfef.rs485;
 
+import com.netfef.protocol.ByteArrayBuilder;
 import com.netfef.protocol.Frame;
 import com.netfef.protocol.NetFef;
 import com.netfef.util.FormatHelper;
@@ -38,16 +39,18 @@ public class NetFefRs485 {
     public static final int MINIMAL_FRAME_SPACING_MS = 100;
     public static final int COLLISION_PENALTY_MAX_MS = 300;
     private static final int MAX_LEN = 1024;
-    private static final long WAIT_TIMEOUT = 200;
+    private static final int RECEIVE_MS = 120;
     private GpioPinDigitalOutput writeEnablePin;
     private Serial serial;
     private NetFefRs485ReceiveListener listener;
     private GpioController gpio;
-    private SerialDataEventListener serialDataEventListener;
     private Queue<byte[]> sendQueue = new ConcurrentLinkedDeque<>();
     private boolean running;
     private Thread sendThread;
     private Random random = new Random();
+    private Thread receiveThread;
+    private boolean readEnabled;
+    private boolean readInProgress = false;
 
     public NetFefRs485(NetFefRs485ReceiveListener listener) {
         this.listener = listener;
@@ -60,27 +63,6 @@ public class NetFefRs485 {
 
         writeEnablePin = gpio.provisionDigitalOutputPin(WRITE_ENABLED_PIN, "WriteEnabled", PinState.LOW);
 
-        serialDataEventListener = event -> {
-            byte[] bytes;
-            try {
-                bytes = event.getBytes();
-            }
-            catch (IOException e) {
-                LOG.error("Error receiving bytes", e);
-                listener.handleError(e);
-                return;
-            }
-            if(bytes.length < 12) {
-                // -- A valid frame is at least 12 byte long.
-                return;
-            }
-            if(LOG.isTraceEnabled()) {
-                LOG.trace("Bytes received: " + FormatHelper.byteArrayToString(bytes));
-            }
-//            System.out.println("Bytes received: " + FormatHelper.byteArrayToString(bytes));
-            Frame frame = NetFef.buildFrameObject(bytes, MAX_LEN, NetFef.MASTER_ADDRESS);
-            listener.dataReceived(frame);
-        };
         enableRead();
 
         serial.open(Serial.DEFAULT_COM_PORT, 9600);
@@ -110,33 +92,76 @@ public class NetFefRs485 {
         });
 
         sendThread.start();
+
+        receiveThread = new Thread(() -> {
+            ByteArrayBuilder bab = new ByteArrayBuilder();
+            Long lastSerialRead = null;
+            while (NetFefRs485.this.running) {
+                if(readEnabled) {
+                    try {
+                        if (serial.available() > 0) {
+                            readInProgress = true;
+                            byte[] bytes = serial.read();
+                            lastSerialRead = new Date().getTime();
+                            bab.append(bytes);
+                        }
+                        else {
+                            if ((lastSerialRead != null) && ((lastSerialRead + RECEIVE_MS) < new Date().getTime())) {
+
+                                byte[] bytes = bab.getBytes();
+                                bab.clear();
+                                readInProgress = false;
+                                lastSerialRead = null;
+
+                                if (bytes.length < 12) {
+//System.out.println("An invalid frame with size of " + bytes.length + " received.");
+                                    // -- A valid frame is at least 12 byte long.
+                                    return;
+                                }
+                                if (LOG.isTraceEnabled()) {
+                                    LOG.trace("Bytes received: " + FormatHelper.byteArrayToString(bytes));
+                                }
+//System.out.println("Bytes received: " + FormatHelper.byteArrayToString2(bytes));
+                                Frame frame = NetFef.buildFrameObject(bytes, MAX_LEN, NetFef.MASTER_ADDRESS);
+                                listener.dataReceived(frame);
+
+                            }
+                        }
+                    }
+                    catch (IOException e) {
+                        LOG.error("Error reading from serial", e);
+                        sleep(2000);
+                    }
+                } else {
+                    sleep(50);
+                }
+            }
+        });
+
+        receiveThread.start();
+    }
+
+    private void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        }
+        catch (InterruptedException e1) {
+            LOG.error("Interrupted", e1);
+        }
     }
 
     public void enableRead() {
-        serial.addListener(serialDataEventListener);
+        this.readEnabled = true;
     }
 
     public boolean disableRead() {
-        Date start = new Date();
-        try {
-            while(serial.available() > 0) {
-                if(new Date().getTime() > (start.getTime() + WAIT_TIMEOUT)) {
-                    LOG.debug("Cannot send: data on channel");
-                    return false;
-                }
-                Thread.sleep(5);
-            }
-        }
-        catch (IOException e) {
-            LOG.error("Error on serial.", e);
+        if(this.readInProgress) {
             return false;
         }
-        catch (InterruptedException e) {
-            LOG.error("Interrupted", e);
-            return false;
+        else {
+            this.readEnabled = false;
+            return true;
         }
-        serial.removeListener(serialDataEventListener);
-        return true;
     }
 
     public void sendData(Frame frame, byte[] myAddress) {
@@ -178,7 +203,7 @@ public class NetFefRs485 {
         Date date = new Date();
         int available;
         while((available = serial.available()) == 0) {
-            if(new Date().getTime() > (date.getTime() + WAIT_TIMEOUT) ) {
+            if(new Date().getTime() > (date.getTime() + RECEIVE_MS) ) {
                 LOG.debug("Own echo not found");
                 return false;
             }
@@ -199,6 +224,12 @@ public class NetFefRs485 {
         running = false;
         try {
             sendThread.join();
+        }
+        catch (InterruptedException e) {
+            LOG.error("Thread couldn't be stopped.", e);
+        }
+        try {
+            receiveThread.join();
         }
         catch (InterruptedException e) {
             LOG.error("Thread couldn't be stopped.", e);

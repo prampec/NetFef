@@ -40,9 +40,39 @@ public class ByteArrayReader {
     }
 
 
-    public static int getInt2(byte byte0, byte byte1) {
-        int retVal = (int)byte0*255 + byte1;
+    private static int getInt2(byte b0, byte b1) {
+        int retVal = Byte.toUnsignedInt(b0) << 8 | Byte.toUnsignedInt(b1);
         return retVal;
+    }
+
+    private static int getSignedInt2(byte b0, byte b1) {
+        int i0 = Byte.toUnsignedInt(b0);
+        int i1 = Byte.toUnsignedInt(b1);
+        int min = 1;
+        if((i0 & 0b10000000) > 0) {
+            i0 = i0 ^ 0b11111111;
+            i1 = i1 ^ 0b11111111;
+            min = -1;
+        }
+        int retVal = i0 << 8 | i1;
+        return min * (retVal + 1);
+    }
+
+    private static long getSignedInt4(byte b0, byte b1, byte b2, byte b3) {
+        int i0 = Byte.toUnsignedInt(b0);
+        int i1 = Byte.toUnsignedInt(b1);
+        int i2 = Byte.toUnsignedInt(b2);
+        int i3 = Byte.toUnsignedInt(b3);
+        long min = 1;
+        if((i0 & 0b10000000) > 0) {
+            i0 = i0 ^ 0b11111111;
+            i1 = i1 ^ 0b11111111;
+            i2 = i2 ^ 0b11111111;
+            i3 = i3 ^ 0b11111111;
+            min = -1;
+        }
+        long retVal =i3 | i2<<8 | i1<<16 | i0 <<24;
+        return min * (retVal + 1);
     }
 
     public char readChar() {
@@ -55,7 +85,7 @@ public class ByteArrayReader {
 
     public String readString(int length) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < (length-1); i++) {
             byte aByte = readByte();
             sb.append((char)aByte);
         }
@@ -68,7 +98,15 @@ public class ByteArrayReader {
     }
 
     private long readInt4(byte b0, byte b1, byte b2, byte b3) {
-        long retVal = (long)b0 | b1<<8 | b2<<16 | b3 <<24;
+        long retVal = Byte.toUnsignedLong(b3) | Byte.toUnsignedLong(b2)<<8 | Byte.toUnsignedLong(b1)<<16 | Byte.toUnsignedLong(b0) <<24;
         return retVal;
+    }
+
+    public int readSignedInt2() {
+        return getSignedInt2(readByte(), readByte());
+    }
+
+    public long readSignedInt4() {
+        return getSignedInt4(readByte(), readByte(), readByte(), readByte());
     }
 }

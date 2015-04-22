@@ -102,21 +102,13 @@ public class NetFef {
             int value = bar.readInt2();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.SIGNED_INTEGER) {
-            int value = bar.readInt2();
-            if((value & (0x1<<15)) > 0) {
-                value ^= 0x1<<15;
-                value = -value;
-            }
+            int value = bar.readSignedInt2();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.LONG) {
             long value = bar.readInt4();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.SIGNED_LONG) {
-            long value = bar.readInt4();
-            if((value & (0x1<<31)) > 0) {
-                value ^= 0x1<<31;
-                value = -value;
-            }
+            long value = bar.readSignedInt4();
             parameter.setValue(value);
         } else if(parameterType == ParameterType.CHAR) {
             char value = bar.readChar();
