@@ -13,8 +13,9 @@
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, const byte* myAddress, const byte* targetAddress, char command) {
+NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const byte* myAddress, const byte* targetAddress, char command) {
   this->_bytes = buffer;
+  this->_buffLen = buffLen;
   this->_pos = 2; // -- Leave the first two bytes for the frame length.
 
   this->_addByte(2);
@@ -43,85 +44,114 @@ byte* NetFefFrameBuilder::getFrameBytes() {
   return this->_bytes;
 }
 
-int NetFefFrameBuilder::getFrameLength() {
+unsigned int NetFefFrameBuilder::getFrameLength() {
   return this->_pos;
 }
 
-void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, char* value) {
-  this->_addByte(parameterName);
-  this->_addByte(parameterType);
-  if(
+boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, char* value) {
+  boolean success = this->_addByte(parameterName) && this->_addByte(parameterType);
+  if(!success) {
+    return false;
+  }
+  else if(
     (parameterType == 'c')
     || (parameterType == 'B')
     || (parameterType == 'b')
     ) {
-    this->_addByte(*value);
+    success = this->_addByte(*value);
   }
   else if(parameterType == 's') {
     int len = strlen(value) + 1;
-    this->_addByte(len);
-  // -- TODO: may add some check to prevent buffer overflow
-    strcpy((char*)this->_bytes+this->_pos, value);
-    this->_pos += len;
+    success = this->_addByte(len);
+    if(success && (this->_pos+len) < this->_buffLen) {
+      strcpy((char*)this->_bytes+this->_pos, value);
+      this->_pos += len;
+    } else {
+      success = false;
+    }
   }
   else if(parameterType == 'S') {
     int len = strlen(value) + 1;
-    this->_addInt2(len);
-    // -- TODO: may add some check to prevent buffer overflow
-    strcpy((char*)this->_bytes+this->_pos, value);
-    this->_pos += len;
+    success = this->_addInt2(len);
+    if(success && (this->_pos+len) < this->_buffLen) {
+      strcpy((char*)this->_bytes+this->_pos, value);
+      this->_pos += len;
+    } else {
+      success = false;
+    }
   }
-  
-  this->_bytes[this->_paramCountPos] += 1;
+
+  if(success) {
+    this->_bytes[this->_paramCountPos] += 1;
+  }
+  return success;
 }
 
-void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
-  this->_addByte(parameterName);
-  this->_addByte(parameterType);
-  if(parameterType == 'b') {
-    this->_addByte(value);
+boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
+  boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
+  if(!success) {
+    return false;
+  }
+  else if(parameterType == 'b') {
+    success = this->_addByte(value);
   }
   else if((parameterType == 'i') || (parameterType == 'I')) {
-    this->_addInt2(value);
+    success = this->_addInt2(value);
   }
-  this->_bytes[this->_paramCountPos] += 1;
-}
-
-void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, int value) {
-  this->addParameter(parameterName, 'I', (unsigned int)value);
-}
-
-void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
-  this->_addByte(parameterName);
-  this->_addByte(parameterType);
-  if((parameterType == 'l') || (parameterType == 'L')) {
-    this->_addInt4(value);
+  if(success) {
+    this->_bytes[this->_paramCountPos] += 1;
   }
-  this->_bytes[this->_paramCountPos] += 1;
+  return success;
 }
 
-void NetFefFrameBuilder::addParameter(char parameterName, char parameterType, long value) {
-  this->addParameter(parameterName, 'L', (unsigned long)value);
+boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, int value) {
+  return this->addParameter(parameterName, 'I', (unsigned int)value);
 }
 
-void NetFefFrameBuilder::_addByte(byte value) {
-  // -- TODO: may add some check to prevent buffer overflow
-if(this->_debug != NULL) { this->_debug->print(this->_pos); this->_debug->print('-'); this->_debug->print(value, HEX); this->_debug->print(' '); }
+boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
+  boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
+  if(!success) {
+    return false;
+  }
+  else if((parameterType == 'l') || (parameterType == 'L')) {
+    success = this->_addInt4(value);
+  }
+  if(success) {
+    this->_bytes[this->_paramCountPos] += 1;
+  }
+  return success;
+}
+
+boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, long value) {
+  return this->addParameter(parameterName, 'L', (unsigned long)value);
+}
+
+boolean NetFefFrameBuilder::_addByte(byte value) {
+  if((this->_pos+1) >= this->_buffLen) {
+    return false;
+  }
   this->_bytes[this->_pos++] = value;
+  return true;
 }
 
-void NetFefFrameBuilder::_addInt2(unsigned int value) {
-  // -- TODO: may add some check to prevent buffer overflow
+boolean NetFefFrameBuilder::_addInt2(unsigned int value) {
+  if((this->_pos+2) >= this->_buffLen) {
+    return false;
+  }
   this->_bytes[this->_pos++] = value >> 8;
   this->_bytes[this->_pos++] = value;
+  return true;
 }
 
-void NetFefFrameBuilder::_addInt4(unsigned long value) {
-  // -- TODO: may add some check to prevent buffer overflow
+boolean NetFefFrameBuilder::_addInt4(unsigned long value) {
+  if((this->_pos+4) >= this->_buffLen) {
+    return false;
+  }
   this->_bytes[this->_pos++] = value >> 24;
   this->_bytes[this->_pos++] = value >> 16;
   this->_bytes[this->_pos++] = value >> 8;
   this->_bytes[this->_pos++] = value;
+  return true;
 }
 
 
@@ -130,9 +160,11 @@ void NetFefFrameBuilder::_addInt4(unsigned long value) {
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameReader::NetFefFrameReader(byte* frame) {
+NetFefFrameReader::NetFefFrameReader(byte* frame, unsigned int frameMaxSize) {
   this->_bytes = frame;
+  this->_frameMaxSize = frameMaxSize;
   
+  this->frameLength = this->getInt(this->_bytes);
   this->targetAddressLength = this->_bytes[2];
   this->sourceAddressLength = this->_bytes[3 + this->targetAddressLength];
   this->_paramCount = this->_bytes[4 + this->targetAddressLength + this->sourceAddressLength];
@@ -140,6 +172,9 @@ NetFefFrameReader::NetFefFrameReader(byte* frame) {
 }
 
 boolean NetFefFrameReader::isForMe(const byte* myAddress) {
+  if(!this->_frameMaxSize > this->frameLength) {
+    return false; // -- Cannot handle bigger frames than allocated buffers.
+  }
   int broadCast = memcmp(this->_bytes+3, BROADCAST_ADDRESS, 2);
   return 0 == broadCast || ((this->targetAddressLength == 2) && (0 == memcmp(this->_bytes+3, myAddress, 2)));
 }

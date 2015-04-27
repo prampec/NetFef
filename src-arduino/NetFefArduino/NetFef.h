@@ -18,28 +18,29 @@ const byte MASTER_ADDRESS[2] = { 0x00, 0x01 };
 
 class NetFefFrameBuilder {
   public:
-    NetFefFrameBuilder(byte* buffer, const byte* myAddress, const byte* targetAddress, char command);
-    void addParameter(char parameterName, char parameterType, char* value);
-    void addParameter(char parameterName, char parameterType, unsigned int value);
-    void addParameter(char parameterName, char parameterType, int value);
-    void addParameter(char parameterName, char parameterType, unsigned long value);
-    void addParameter(char parameterName, char parameterType, long value);
+    NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const byte* myAddress, const byte* targetAddress, char command);
+    boolean addParameter(char parameterName, char parameterType, char* value);
+    boolean addParameter(char parameterName, char parameterType, unsigned int value);
+    boolean addParameter(char parameterName, char parameterType, int value);
+    boolean addParameter(char parameterName, char parameterType, unsigned long value);
+    boolean addParameter(char parameterName, char parameterType, long value);
     byte* getFrameBytes();
-    int getFrameLength();
+    unsigned int getFrameLength();
     Print* _debug = NULL;
     
   private:
     byte* _bytes;
-    int _pos;
-    int _paramCountPos;
-    void _addByte(byte value);
-    void _addInt2(unsigned int value);
-    void _addInt4(unsigned long value);
+    unsigned int _buffLen;
+    unsigned int _pos;
+    unsigned int _paramCountPos;
+    boolean _addByte(byte value);
+    boolean _addInt2(unsigned int value);
+    boolean _addInt4(unsigned long value);
 };
 
 class NetFefFrameReader {
   public:
-    NetFefFrameReader(byte* frame);
+    NetFefFrameReader(byte* frame, unsigned int frameSize);
     boolean isForMe(const byte* myAddress);
     byte* getSenderAddress();
     byte* getCommand();
@@ -50,11 +51,14 @@ class NetFefFrameReader {
     byte sourceAddressLength;
     Print* _debug = NULL;
     static unsigned int getInt(byte* position);
+    unsigned int frameLength;
     
   private:
     byte* _bytes;
-    int _paramCount;
-    int _paramsPos;
+    unsigned int _frameSize;
+    unsigned int _paramCount;
+    unsigned int _paramsPos;
+    unsigned int _frameMaxSize;
 };
 
 class NetFefParameter {

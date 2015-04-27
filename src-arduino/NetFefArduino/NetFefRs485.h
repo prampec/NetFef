@@ -18,10 +18,14 @@
 
 #define MINIMAL_FRAME_SPACING_MS 200
 #define COLLISION_PENALTY_MAX_MS 400
-#define COMM_QUEUE_LENGTH 5
-#define COMM_DATA_FRAME_LENGTH 60
-//#define COMM_DATA_FRAME 1
 #define READ_TIMEOUT_MS 10
+
+#ifndef COMM_QUEUE_LENGTH
+  #define COMM_QUEUE_LENGTH 5
+#endif // -- COMM_QUEUE_LENGTH
+#ifndef COMM_DATA_FRAME_LENGTH
+  #define COMM_DATA_FRAME_LENGTH 60
+#endif // -- COMM_DATA_FRAME_LENGTH
 
 
 class NetFefRs485 : public Task
@@ -50,4 +54,4 @@ class NetFefRs485 : public Task
     Print* _debugOut = NULL;
 };
 
-#endif // -- NetFefRs485
+#endif // -- NetFefRs485_H
