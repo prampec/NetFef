@@ -1,12 +1,3 @@
-/**
- * Two direction communication.
- */
-#include <SoftTimer.h>
-#include <Task.h>
-#include <BlinkTask.h>
-#include <LiquidCrystal.h>
-
-#include "NetFef.h"
 /*
  * This file is part of the NetFef serial network bus protocol project.
  *
@@ -17,6 +8,14 @@
  * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
  * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
  */
+#include <SoftTimer.h>
+#include <Task.h>
+#include <BlinkTask.h>
+#include <LiquidCrystal.h>
+
+#include "NetFef.h"
+#define COMM_QUEUE_LENGTH 5
+#define COMM_DATA_FRAME_LENGTH 60
 #include "NetFefRs485.h"
 
 #define FIRST_CHAR 'A'
@@ -48,7 +47,7 @@ void setup() {
 char counter = FIRST_CHAR;
 byte data[COMM_DATA_FRAME_LENGTH];
 void test(Task* me) {
-  NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, MYADDRESS, MASTER_ADDRESS, 't');
+  NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH, MYADDRESS, MASTER_ADDRESS, 't');
   lcd.setCursor(0,0);
   if(!netFefRs485.canSend()) {
     lcd.print("Cannot send");
@@ -83,7 +82,7 @@ void readerJob(Task* me) {
   if(netFefRs485.dataAvailable()) {
     lcd.setCursor(0,1);
     byte* data = netFefRs485.readFrame();
-    NetFefFrameReader netFefFrameReader = NetFefFrameReader(data);
+    NetFefFrameReader netFefFrameReader = NetFefFrameReader(data, COMM_DATA_FRAME_LENGTH);
 //netFefFrameReader._debug = &lcd;
     if(netFefFrameReader.isForMe(MYADDRESS)) {
       lcd.print(">");
