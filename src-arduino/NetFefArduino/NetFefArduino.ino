@@ -47,7 +47,7 @@ void setup() {
 char counter = FIRST_CHAR;
 byte data[COMM_DATA_FRAME_LENGTH];
 void test(Task* me) {
-  NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH, MYADDRESS, MASTER_ADDRESS, 't');
+  NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH, MYADDRESS, MASTER_ADDRESS, 't', 't');
   lcd.setCursor(0,0);
   if(!netFefRs485.canSend()) {
     lcd.print("Cannot send");

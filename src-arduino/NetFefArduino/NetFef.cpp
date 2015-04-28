@@ -13,7 +13,7 @@
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const byte* myAddress, const byte* targetAddress, char command) {
+NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const byte* myAddress, const byte* targetAddress, char subject, char command) {
   this->_bytes = buffer;
   this->_buffLen = buffLen;
   this->_pos = 2; // -- Leave the first two bytes for the frame length.
@@ -30,6 +30,7 @@ NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const
   this->_bytes[this->_paramCountPos] = 0;
   this->_pos += 1;
   
+  this->addParameter('s', 'c', &subject);
   this->addParameter('c', 'c', &command);
 }
 
@@ -38,8 +39,17 @@ byte* NetFefFrameBuilder::getFrameBytes() {
   // -- Write frame size to the topmost position
   int frameSize = this->_pos;
   this->_pos = 0;
-  this->_addInt2(frameSize);
+  this->_addInt2(frameSize+1);
   this->_pos = frameSize; // -- Reset cursor position to the end.
+  
+  // -- Calculate sum
+  if((this->_pos+1) < this->_buffLen) {
+    byte sum = 0;
+    for(int i = 0; i<this->_pos; i++) {
+    sum += this->_bytes[i];
+  }
+    this->_bytes[this->_pos] = sum;
+  }
   
   return this->_bytes;
 }
@@ -172,11 +182,23 @@ NetFefFrameReader::NetFefFrameReader(byte* frame, unsigned int frameMaxSize) {
 }
 
 boolean NetFefFrameReader::isForMe(const byte* myAddress) {
-  if(!this->_frameMaxSize > this->frameLength) {
+  if(!this->isValid()) {
     return false; // -- Cannot handle bigger frames than allocated buffers.
   }
   int broadCast = memcmp(this->_bytes+3, BROADCAST_ADDRESS, 2);
   return 0 == broadCast || ((this->targetAddressLength == 2) && (0 == memcmp(this->_bytes+3, myAddress, 2)));
+}
+
+boolean NetFefFrameReader::isValid() {
+  if(!this->_frameMaxSize > this->frameLength) {
+    return false; // -- Cannot handle bigger frames than allocated buffers.
+  }
+  // -- Check sum
+  byte sum = 0;
+  for(int i=0; i<this->frameLength-1; i++) {
+    sum += this->_bytes[i];
+  }
+  return sum == this->_bytes[this->frameLength-1];
 }
 
 byte* NetFefFrameReader::getSenderAddress() {
@@ -223,6 +245,10 @@ if(this->_debug != NULL) { this->_debug->print('-'); this->_debug->print(paramSp
 
 byte* NetFefFrameReader::getCommand() {
   return getParameter('c');
+}
+
+byte* NetFefFrameReader::getSubject() {
+  return getParameter('s');
 }
 
 unsigned int NetFefFrameReader::getInt(byte* position) {

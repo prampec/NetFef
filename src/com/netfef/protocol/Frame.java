@@ -25,8 +25,24 @@ import java.util.Map;
 public class Frame {
     byte[] targetAddress;
     byte[] senderAddress;
+    Parameter subject;
     Parameter command;
     Map<Character, Parameter> parameters = new HashMap<>();
+
+    Frame() {
+    }
+
+    public Frame(byte[] targetAddress, char subject, char command) {
+        this.targetAddress = targetAddress;
+        this.setSubject(subject);
+        this.setCommand(command);
+    }
+
+    public Frame(byte[] targetAddress, Parameter subject, Parameter command) {
+        this.targetAddress = targetAddress;
+        this.subject = subject;
+        this.command = command;
+    }
 
     public byte[] getTargetAddress() {
         return targetAddress;
@@ -44,14 +60,23 @@ public class Frame {
         this.senderAddress = senderAddress;
     }
 
+    public Parameter getSubject() {
+        return subject;
+    }
     public Parameter getCommand() {
         return command;
     }
 
+    public void setSubject(Parameter subject) {
+        this.subject = subject;
+    }
     public void setCommand(Parameter command) {
         this.command = command;
     }
 
+    public void setSubject(char cmd) {
+        this.setSubject(new Parameter('s', ParameterType.CHAR, cmd));
+    }
     public void setCommand(char cmd) {
         this.setCommand(new Parameter('c', ParameterType.CHAR, cmd));
     }
@@ -67,6 +92,8 @@ public class Frame {
         addBytes(sb, senderAddress);
         sb.append(" To:");
         addBytes(sb, targetAddress);
+        sb.append(" Subj:");
+        sb.append(subject);
         sb.append(" Cmd:");
         sb.append(command);
         sb.append(" Params:[");
@@ -99,7 +126,9 @@ public class Frame {
 
     public void setParameters(List<Parameter> parameters) {
         for (Parameter parameter : parameters) {
-            if('c' == parameter.getParameterName()) {
+            if('s' == parameter.getParameterName()) {
+                this.subject = parameter;
+            } else if('c' == parameter.getParameterName()) {
                 this.command = parameter;
             } else {
                 this.parameters.put(parameter.getParameterName(), parameter);

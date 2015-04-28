@@ -63,9 +63,7 @@ public class NetFefRs485Tester {
             if((line == null) || line.startsWith("q")) {
                 return;
             } else {
-                Frame frame = new Frame();
-                frame.setTargetAddress(new byte[]{0x12, (byte)0xAB});
-                frame.setCommand('t');
+                Frame frame = new Frame(new byte[]{0x12, (byte)0xAB}, 't', 't');
 
                 for (byte b : line.getBytes()) {
                     Parameter v = null;

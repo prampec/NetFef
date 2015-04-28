@@ -49,6 +49,9 @@ public class FormatHelper {
             } else {
                 first = false;
             }
+            if(b < 0) {
+                sb.append("(byte)");
+            }
             sb.append("0x").append(toHexString2(b));
         }
         sb.append("}");

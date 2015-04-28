@@ -45,6 +45,17 @@ public class NetFef {
             return null;
         }
 
+        // -- Check sum
+        int sum = 0;
+        for (int i = 0; i < (bytes.length-1); i++) {
+            sum += Byte.toUnsignedInt(bytes[i]);
+        }
+        if((byte)sum != bytes[len-1]) {
+            // -- Check sum mismatch
+            LOG.warn("Check sum error. Dropping frame.");
+            return null;
+        }
+
         int targetAddressLength = bar.readInt1();
         byte[] targetAddress = new byte[targetAddressLength];
         for (int i = 0; i < targetAddressLength; i++) {
@@ -137,13 +148,23 @@ public class NetFef {
         bab.append(frame.getTargetAddress());
         bab.append1(frame.getSenderAddress().length);
         bab.append(frame.getSenderAddress());
-        bab.append1(frame.getParameters().size() + 1);
+        bab.append1(frame.getParameters().size() + 2);
+        buildParameterBytes(bab, frame.getSubject());
         buildParameterBytes(bab, frame.getCommand());
         for (Parameter parameter : frame.getParameters().values()) {
             buildParameterBytes(bab, parameter);
         }
 
-        bab.insertToBeginning(bab.getSize() + 2);
+        bab.insertToBeginning(bab.getSize() + 2 + 1);
+
+        // -- Calculate sum
+        byte[] bytes = bab.getBytes();
+        int sum = 0;
+        for (byte aByte : bytes) {
+            sum += Byte.toUnsignedInt(aByte);
+        }
+        byte sumByte = (byte)sum;
+        bab.append(new byte[] {sumByte});
 
         return bab.getBytes();
     }
