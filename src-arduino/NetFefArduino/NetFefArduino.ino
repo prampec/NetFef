@@ -13,7 +13,7 @@
 #include <BlinkTask.h>
 #include <LiquidCrystal.h>
 
-#include "NetFef.h"
+#include "NetFefData.h"
 #define COMM_QUEUE_LENGTH 5
 #define COMM_DATA_FRAME_LENGTH 60
 #include "NetFefRs485.h"

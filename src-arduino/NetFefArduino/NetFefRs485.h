@@ -14,7 +14,8 @@
 #include <Arduino.h>
 #include <Task.h>
 
-#include "NetFef.h"
+#include "NetFefData.h"
+#include "INetFefNetwork.h"
 
 #define MINIMAL_FRAME_SPACING_MS 200
 #define COLLISION_PENALTY_MAX_MS 400
@@ -28,7 +29,7 @@
 #endif // -- COMM_DATA_FRAME_LENGTH
 
 
-class NetFefRs485 : public Task
+class NetFefRs485 : public Task, public INetFefNetwork
 {
   public:
     NetFefRs485(HardwareSerial* serial, int writeEnabledPin);

@@ -11,10 +11,11 @@
 
 package com.netfef.util;
 
-import com.netfef.protocol.Frame;
-import com.netfef.protocol.NetFef;
-import com.netfef.protocol.Parameter;
-import com.netfef.protocol.ParameterType;
+import com.netfef.data.Frame;
+import com.netfef.data.NetFefDataHelper;
+import com.netfef.data.Parameter;
+import com.netfef.data.ParameterType;
+import com.netfef.protocol.NetFefReceiveListener;
 import com.netfef.rs485.NetFefRs485;
 
 import java.io.BufferedReader;
@@ -34,17 +35,19 @@ public class NetFefRs485Tester {
     }
 
     private void run() throws IOException {
-        NetFefRs485 module = new NetFefRs485(new NetFefRs485.NetFefRs485ReceiveListener() {
-            @Override
-            public void dataReceived(Frame frame) {
-                System.out.println("Frame received: " + frame);
-            }
+        NetFefRs485 module = new NetFefRs485();
+        module.setListener(
+                new NetFefReceiveListener() {
+                    @Override
+                    public void dataReceived(Frame frame) {
+                        System.out.println("Frame received: " + frame);
+                    }
 
-            @Override
-            public void handleError(IOException e) {
-                System.out.println("Error occurred:" + e.getMessage());
-            }
-        });
+                    @Override
+                    public void handleError(IOException e) {
+                        System.out.println("Error occurred:" + e.getMessage());
+                    }
+                });
         module.init();
 
         System.out.println("Started. Enter command! Commands are: B, b, i, I, l, L, c, s, S, q");
@@ -120,7 +123,7 @@ public class NetFefRs485Tester {
                         }
                     }
                 }
-                module.sendData(frame, NetFef.MASTER_ADDRESS);
+                module.sendData(frame, NetFefDataHelper.MASTER_ADDRESS);
 
             }
         }

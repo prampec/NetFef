@@ -9,7 +9,7 @@
  * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
  */
 
-package com.netfef.protocol;
+package com.netfef.data;
 
 import com.netfef.util.FormatHelper;
 import org.slf4j.Logger;
@@ -20,13 +20,13 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * <p>The NetFef protocol implementation.</p>
+ * <p>The NetFef data implementation.</p>
  * <p>User: kelemenb
  * <br/>Date: 4/9/15</p>
  */
-public class NetFef {
+public class NetFefDataHelper {
     /** Logger. */
-    private static final Logger LOG = LoggerFactory.getLogger(NetFef.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NetFefDataHelper.class);
 
     public static byte[] BROADCAST_ADDRESS = new byte[] { 0x00, 0x00 };
     public static byte[] MASTER_ADDRESS = new byte[] { 0x00, 0x01 };

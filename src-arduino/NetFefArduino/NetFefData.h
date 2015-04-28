@@ -8,8 +8,8 @@
  * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
  * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
  */
-#ifndef NETFEF_H
-#define NETFEF_H
+#ifndef NetFefData_H
+#define NetFefData_H
 
 #include <Arduino.h>
 
@@ -83,4 +83,4 @@ class NetFefParameter {
     byte* _pp;
 };
 
-#endif // -- NETFEF_H
+#endif // -- NetFefData_H

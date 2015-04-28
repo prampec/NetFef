@@ -11,13 +11,14 @@
 
 package com.netfef.rs485;
 
-import com.netfef.protocol.ByteArrayBuilder;
-import com.netfef.protocol.Frame;
-import com.netfef.protocol.NetFef;
+import com.netfef.data.ByteArrayBuilder;
+import com.netfef.data.Frame;
+import com.netfef.data.NetFefDataHelper;
+import com.netfef.protocol.NetFefNetwork;
+import com.netfef.protocol.NetFefReceiveListener;
 import com.netfef.util.FormatHelper;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.serial.Serial;
-import com.pi4j.io.serial.SerialDataEventListener;
 import com.pi4j.io.serial.SerialFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * <p>User: kelemenb
  * <br/>Date: 4/8/15</p>
  */
-public class NetFefRs485 {
+public class NetFefRs485 implements NetFefNetwork {
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger(NetFefRs485.class);
 
@@ -42,7 +43,7 @@ public class NetFefRs485 {
     private static final int RECEIVE_MS = 120;
     private GpioPinDigitalOutput writeEnablePin;
     private Serial serial;
-    private NetFefRs485ReceiveListener listener;
+    private NetFefReceiveListener listener;
     private GpioController gpio;
     private Queue<byte[]> sendQueue = new ConcurrentLinkedDeque<>();
     private boolean running;
@@ -52,10 +53,15 @@ public class NetFefRs485 {
     private boolean readEnabled;
     private boolean readInProgress = false;
 
-    public NetFefRs485(NetFefRs485ReceiveListener listener) {
+    public NetFefRs485() {
+    }
+
+    @Override
+    public void setListener(NetFefReceiveListener listener) {
         this.listener = listener;
     }
 
+    @Override
     public void init() throws IOException {
         running = true;
         gpio = GpioFactory.getInstance();
@@ -122,7 +128,7 @@ public class NetFefRs485 {
                                     LOG.trace("Bytes received: " + FormatHelper.byteArrayToString(bytes));
                                 }
 //System.out.println("Bytes received: " + FormatHelper.byteArrayToString2(bytes));
-                                Frame frame = NetFef.buildFrameObject(bytes, MAX_LEN, NetFef.MASTER_ADDRESS);
+                                Frame frame = NetFefDataHelper.buildFrameObject(bytes, MAX_LEN, NetFefDataHelper.MASTER_ADDRESS);
                                 listener.dataReceived(frame);
 
                             }
@@ -164,8 +170,9 @@ public class NetFefRs485 {
         }
     }
 
+    @Override
     public void sendData(Frame frame, byte[] myAddress) {
-        byte[] bytesToSend = NetFef.buildFrameBytes(frame, myAddress);
+        byte[] bytesToSend = NetFefDataHelper.buildFrameBytes(frame, myAddress);
         sendQueue.add(bytesToSend);
     }
 
@@ -241,12 +248,5 @@ public class NetFefRs485 {
             throw new IllegalStateException(e);
         }
         gpio.shutdown();
-    }
-
-    public static interface NetFefRs485ReceiveListener extends EventListener {
-
-        void dataReceived(Frame frame);
-
-        void handleError(IOException e);
     }
 }

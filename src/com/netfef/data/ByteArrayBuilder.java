@@ -9,7 +9,7 @@
  * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
  */
 
-package com.netfef.protocol;
+package com.netfef.data;
 
 import java.util.Arrays;
 
