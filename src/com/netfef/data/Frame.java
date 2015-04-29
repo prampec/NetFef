@@ -135,4 +135,12 @@ public class Frame {
             }
         }
     }
+
+    public boolean hasParameter(char paramName) {
+        return this.parameters.containsKey(paramName);
+    }
+
+    public Parameter getParameter(char parameterName) {
+        return parameters.get(parameterName);
+    }
 }

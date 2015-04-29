@@ -15,7 +15,10 @@ import com.netfef.data.ByteArrayBuilder;
 import com.netfef.data.Frame;
 import com.netfef.data.NetFefDataHelper;
 import com.netfef.protocol.NetFefNetwork;
+import com.netfef.protocol.NetFefNetworkConfig;
+import com.netfef.protocol.NetFefPhysicalLayer;
 import com.netfef.protocol.NetFefReceiveListener;
+import com.netfef.protocol.obsidian.NetFefObsidianConfig;
 import com.netfef.util.FormatHelper;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.serial.Serial;
@@ -26,13 +29,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * <p>RS485 based implementation for the NetFef protocol.</p>
  * <p>User: kelemenb
  * <br/>Date: 4/8/15</p>
  */
-public class NetFefRs485 implements NetFefNetwork {
+public class NetFefRs485 implements NetFefPhysicalLayer {
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger(NetFefRs485.class);
 
@@ -45,7 +49,7 @@ public class NetFefRs485 implements NetFefNetwork {
     private Serial serial;
     private NetFefReceiveListener listener;
     private GpioController gpio;
-    private Queue<byte[]> sendQueue = new ConcurrentLinkedDeque<>();
+    private Queue<byte[]> sendQueue = new ConcurrentLinkedQueue<>();
     private boolean running;
     private Thread sendThread;
     private Random random = new Random();
@@ -227,14 +231,17 @@ public class NetFefRs485 implements NetFefNetwork {
         return true;
     }
 
+    @Override
     public void shutdown() {
         running = false;
+        sendThread.interrupt();
         try {
             sendThread.join();
         }
         catch (InterruptedException e) {
             LOG.error("Thread couldn't be stopped.", e);
         }
+        receiveThread.interrupt();
         try {
             receiveThread.join();
         }
@@ -248,5 +255,15 @@ public class NetFefRs485 implements NetFefNetwork {
             throw new IllegalStateException(e);
         }
         gpio.shutdown();
+    }
+
+    @Override
+    public NetFefNetworkConfig getConfig(Class<? extends NetFefNetwork> networkClass) {
+        if(NetFefObsidianConfig.class.isAssignableFrom(networkClass)) {
+            return new NetFefRs485ObsidianConfig();
+        }
+        else {
+            throw new UnsupportedOperationException("Network class " + networkClass.getName() + " configuration is not implemented within " + this.getClass().getName() + " .");
+        }
     }
 }

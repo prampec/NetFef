@@ -28,7 +28,7 @@ public class Parameter {
     public Parameter(char parameterName, ParameterType parameterType, char value) {
         this.parameterName = parameterName;
         this.parameterType = parameterType;
-        stringValue = String.valueOf(value);
+        this.setValue(value);
     }
 
     public Parameter(char parameterName, ParameterType parameterType) {
@@ -40,6 +40,18 @@ public class Parameter {
         this.parameterName = parameterName;
         this.parameterType = parameterType;
         stringValue = value;
+    }
+
+    public Parameter(char parameterName, ParameterType parameterType, int value) {
+        this.parameterName = parameterName;
+        this.parameterType = parameterType;
+        this.setValue(value);
+    }
+
+    public Parameter(char parameterName, ParameterType parameterType, long value) {
+        this.parameterName = parameterName;
+        this.parameterType = parameterType;
+        this.setValue(value);
     }
 
     public char getParameterName() {
@@ -99,5 +111,9 @@ public class Parameter {
     public void setValue(long value) {
         this.longValue = value;
         this.stringValue = String.valueOf(value);
+    }
+
+    public char getChar() {
+        return stringValue == null ? 0 : stringValue.charAt(0);
     }
 }

@@ -12,7 +12,6 @@
 package com.netfef.protocol;
 
 import com.netfef.data.Frame;
-import com.netfef.protocol.obsidian.ReplyListener;
 
 import java.io.IOException;
 
@@ -21,14 +20,15 @@ import java.io.IOException;
  * <p>User: kelemenb
  * <br/>Date: 4/28/15</p>
  */
-public interface NetFefNetwork {
+public interface NetFefPhysicalLayer {
 
     void setListener(NetFefReceiveListener listener);
 
-    void init(NetFefPhysicalLayer physicalLayer, byte[] myAddress, PeerPersister peerPersister);
-
-    void sendData(Frame frame);
-    void sendData(Frame frame, ReplyListener replyListener);
+    void init() throws IOException;
 
     void shutdown();
+
+    void sendData(Frame frame, byte[] myAddress);
+
+    NetFefNetworkConfig getConfig(Class<? extends NetFefNetwork> networkClass);
 }
