@@ -22,8 +22,9 @@ public abstract class NetFefObsidianConfig implements NetFefNetworkConfig {
     protected long replyMaxDelayMs;
     protected long replyRepeatCount;
     protected long joinOfferRepeatSecs;
+    protected int nextPollMinSecs;
     protected int nextPollMaxSecs;
-    protected long pollRetryDelaySecs;
+    protected int pollRetryDelaySecs;
 
     public long getReplyMaxDelayMs() {
         return replyMaxDelayMs;
@@ -37,11 +38,14 @@ public abstract class NetFefObsidianConfig implements NetFefNetworkConfig {
         return joinOfferRepeatSecs;
     }
 
+    public int getNextPollMinSecs() {
+        return nextPollMinSecs;
+    }
     public int getNextPollMaxSecs() {
         return nextPollMaxSecs;
     }
 
-    public long getPollRetryDelaySecs() {
+    public int getPollRetryDelaySecs() {
         return pollRetryDelaySecs;
     }
 }

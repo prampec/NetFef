@@ -78,4 +78,14 @@ public class FormatHelper {
         return aByte & 0xFF;
     }
 
+    public static String byteArrayToString3(byte[] bytes) {
+        if (bytes == null) {
+            return "N/A";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (byte aByte : bytes) {
+            sb.append(FormatHelper.toHexString(aByte));
+        }
+        return sb.toString();
+    }
 }

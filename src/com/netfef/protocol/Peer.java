@@ -11,6 +11,8 @@
 
 package com.netfef.protocol;
 
+import com.netfef.util.FormatHelper;
+
 import java.util.Arrays;
 import java.util.Date;
 
@@ -24,7 +26,9 @@ public class Peer {
     long registrationId;
     boolean active = true;
     public Date lastSeen;
-    public Date nextPollTime;
+    public Date nextPollTime = new Date();
+    private String description;
+    private String version;
 
     public Peer(byte[] address, long registrationId) {
         this.address = address;
@@ -71,6 +75,10 @@ public class Peer {
         this.nextPollTime = nextPollTime;
     }
 
+    public void setNextPollTimeAfterSecs(int secs) {
+        setNextPollTime(new Date(new Date().getTime() + secs*1000));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -97,5 +105,26 @@ public class Peer {
         int result = Arrays.hashCode(address);
         result = 31 * result + (int)(registrationId ^ (registrationId >>> 32));
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + FormatHelper.byteArrayToString3(address) + "](" + registrationId + ')' + description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getVersion() {
+        return version;
     }
 }

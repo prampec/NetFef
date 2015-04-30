@@ -63,7 +63,7 @@ public class NetFefDataHelper {
         }
         if((acceptAddress != null) && !Arrays.equals(targetAddress, acceptAddress) && !Arrays.equals(targetAddress, BROADCAST_ADDRESS)) {
             // -- Frame is not for us.
-            LOG.info("Skipping frame as it is for " + FormatHelper.byteArrayToString(targetAddress) + " (and we are looking for address " + FormatHelper.byteArrayToString(acceptAddress) + ")");
+            LOG.info("Skipping frame as it is for " + FormatHelper.byteArrayToString3(targetAddress) + " (and we are looking for address " + FormatHelper.byteArrayToString3(acceptAddress) + ")");
             return null;
         }
         frame.setTargetAddress(targetAddress);

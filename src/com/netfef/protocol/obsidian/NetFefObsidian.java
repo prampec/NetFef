@@ -16,6 +16,7 @@ import com.netfef.data.NetFefDataHelper;
 import com.netfef.data.Parameter;
 import com.netfef.data.ParameterType;
 import com.netfef.protocol.*;
+import com.netfef.util.FormatHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,7 @@ public class NetFefObsidian implements NetFefNetwork {
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger(NetFefObsidian.class);
     private static final char NETWORK_MANAGEMENT_MESSAGE_SUBJECT = 'n';
+    public static final char PARAM_NAME_REPLY = 'r';
 
     private NetFefPhysicalLayer physicalLayer;
     private byte[] myAddress;
@@ -42,7 +44,7 @@ public class NetFefObsidian implements NetFefNetwork {
     private Queue<OnGoingSend> onGoingSendQueue = new ConcurrentLinkedQueue<>();
     private Map<Frame, OnGoingSend> onGoingSendLookup = new ConcurrentHashMap<>();
     private Thread sendThread;
-    private boolean running;
+    private boolean running = true;
     private Frame waitingReplyFor;
     private long waitStartTime;
     private NetFefObsidianConfig config;
@@ -65,7 +67,7 @@ public class NetFefObsidian implements NetFefNetwork {
         physicalLayer.setListener(new NetFefReceiveListener() {
             @Override
             public void dataReceived(Frame frame) {
-                processFrame(frame);
+                processReceivedFrame(frame);
             }
 
             @Override
@@ -93,30 +95,38 @@ public class NetFefObsidian implements NetFefNetwork {
                 sleep(500);
             } else if(currentPeer.isActive()) {
                 Date now = new Date();
-                if((currentPeer.lastSeen.getTime() + 2*config.getNextPollMaxSecs()*1000) > now.getTime()) {
+                if((currentPeer.lastSeen.getTime() + 2*config.getNextPollMaxSecs()*1000) < now.getTime()) {
                     currentPeer.setActive(false);
                     peerPersister.persist(currentPeer);
                 }
 
                 if(currentPeer.isActive() && currentPeer.nextPollTime.before(now)) {
-                    Frame frame = new Frame(myAddress,'n', 'p');
+                    currentPeer.setNextPollTimeAfterSecs(config.getPollRetryDelaySecs());
+                    Frame frame = new Frame(currentPeer.getAddress(),'n', 'p');
                     final Peer finalCurrentRegistration = currentPeer;
                     this.sendData(frame, new ReplyListener() {
                         @Override
                         public void onReply(Frame originalFrame, Frame repliedFrame) {
-                            finalCurrentRegistration.lastSeen = now;
-                            Integer n = repliedFrame.hasParameter('n') ? repliedFrame.getParameter('n').getIntValue() : 2*60;
-                            if(n > config.getNextPollMaxSecs()) {
-                                n = config.getNextPollMaxSecs();
-                            }
-                            finalCurrentRegistration.nextPollTime = new Date(now.getTime() + n*1000);
+                            updatePeer(repliedFrame, finalCurrentRegistration);
                             listener.dataReceived(frame);
                         }
                     });
                 }
-                sleep(50);
             }
+            sleep(50);
         }
+    }
+
+    private void updatePeer(Frame repliedFrame, Peer peer) {
+        peer.lastSeen = new Date();
+        Integer nextPollInterval = repliedFrame.hasParameter('n') ? repliedFrame.getParameter('n').getIntValue() : config.getNextPollMinSecs();
+        if(nextPollInterval < config.getNextPollMinSecs()) {
+            nextPollInterval = config.getNextPollMinSecs();
+        }
+        else if(nextPollInterval > config.getNextPollMaxSecs()) {
+            nextPollInterval = config.getNextPollMaxSecs();
+        }
+        peer.setNextPollTimeAfterSecs(nextPollInterval);
     }
 
     private void joinOffer() {
@@ -135,7 +145,7 @@ public class NetFefObsidian implements NetFefNetwork {
             long now = new Date().getTime();
 
             // -- Test for finished waiting.
-            if((waitingReplyFor != null) && (waitStartTime + config.getReplyMaxDelayMs() > now)) {
+            if((waitingReplyFor != null) && (waitStartTime + config.getReplyMaxDelayMs() < now)) {
                 OnGoingSend onGoingSend = onGoingSendLookup.get(waitingReplyFor);
                 if(onGoingSend == null) {
                     // -- Did not replied within the MaxDelay time, we need to retry the send.
@@ -147,11 +157,13 @@ public class NetFefObsidian implements NetFefNetwork {
                     // -- We already retried the send, we will not try it any more.
                     onGoingSendQueue.remove(onGoingSend);
                     onGoingSendLookup.remove(waitingReplyFor);
-                    Parameter replyReferenceParameter = waitingReplyFor.getParameter('r');
+                    Parameter replyReferenceParameter = waitingReplyFor.getParameter(PARAM_NAME_REPLY);
                     Integer replyReference = replyReferenceParameter.getIntValue();
                     ReplyInfo replyInfo = replyMap.get(replyReference);
                     replyMap.remove(replyReference);
-                    replyInfo.replyListener.onError(waitingReplyFor);
+                    if(replyInfo != null) {
+                        replyInfo.replyListener.onError(waitingReplyFor);
+                    }
                 }
                 waitingReplyFor = null;
             }
@@ -160,18 +172,18 @@ public class NetFefObsidian implements NetFefNetwork {
                 if(waitingReplyFor == null) {
                     // -- Send the message
                     Frame frameToSend = sendQueue.poll();
-                    NetFefObsidian.this.physicalLayer.sendData(frameToSend, myAddress);
-                    if(frameToSend.hasParameter('r')) {
+                    physicalLayer.sendData(frameToSend, myAddress);
+                    if(frameToSend.hasParameter(PARAM_NAME_REPLY)) {
                         this.waitingReplyFor = frameToSend;
                         this.waitStartTime = now;
                     }
                 }
-            } else if(!onGoingSendQueue.isEmpty()) {
+            } else if(!onGoingSendQueue.isEmpty() && (this.waitingReplyFor == null)) {
                 // -- Resend an unreplied message
                 OnGoingSend onGoingSend = onGoingSendQueue.poll();
                 Frame frameToSend = onGoingSend.frame;
                 onGoingSend.retryCount += 1;
-                NetFefObsidian.this.physicalLayer.sendData(frameToSend, myAddress);
+                physicalLayer.sendData(frameToSend, myAddress);
                 this.waitingReplyFor = frameToSend;
                 this.waitStartTime = now;
                 onGoingSendQueue.add(onGoingSend);
@@ -191,7 +203,14 @@ public class NetFefObsidian implements NetFefNetwork {
         }
     }
 
-    private void processFrame(Frame frame) {
+    private void processReceivedFrame(Frame frame) {
+        if(registrationLookup.containsKey(new Address(frame.getSenderAddress()))) {
+            Peer peer = registrationLookup.get(new Address(frame.getSenderAddress()));
+            if(!peer.isActive()) {
+                LOG.warn("Received message from inactive peer.");
+            }
+            peer.setLastSeen(new Date());
+        }
         if(frame.hasParameter('R')) {
             // -- A reply received, call the listener
             Parameter replyReferenceParameter = frame.getParameter('R');
@@ -201,7 +220,11 @@ public class NetFefObsidian implements NetFefNetwork {
                 replyMap.remove(replyReference);
                 Frame originalFrame = replyInfo.originalFrame;
                 waitingReplyFor = null;
-                onGoingSendLookup.remove(originalFrame);
+                OnGoingSend onGoingSend = onGoingSendLookup.get(originalFrame);
+                if(onGoingSend != null) {
+                    onGoingSendLookup.remove(originalFrame);
+                    onGoingSendQueue.remove(onGoingSend);
+                }
                 sendQueue.remove(originalFrame);
                 replyInfo.replyListener.onReply(originalFrame, frame);
             } else {
@@ -237,10 +260,18 @@ public class NetFefObsidian implements NetFefNetwork {
             this.sendData(joinFrame, new ReplyListener() {
                 @Override
                 public void onReply(Frame originalFrame, Frame repliedFrame) {
-                    peer.lastSeen = new Date();
                     peer.setActive(true);
+                    peer.setDescription(repliedFrame.getParameter('d').getStringValue());
+                    peer.setVersion(repliedFrame.getParameter('v').getStringValue());
+                    updatePeer(repliedFrame, peer);
                     registrationLookup.put(address, peer);
                     peerPersister.persist(peer);
+                }
+
+                @Override
+                public void onError(Frame originalFrame) {
+                    LOG.trace("Join request was not answered by " + FormatHelper.byteArrayToString3(originalFrame.getTargetAddress()));
+                    super.onError(originalFrame);
                 }
             });
         }
@@ -248,6 +279,7 @@ public class NetFefObsidian implements NetFefNetwork {
             // -- Address already in use
             Frame joinDeclineFrame = new Frame(senderAddress, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'J');
             joinDeclineFrame.addParameter(new Parameter('d', ParameterType.CHAR, 'd'));
+            joinDeclineFrame.addParameter(new Parameter('i', ParameterType.INTEGER, registrationId));
 
             this.sendData(joinDeclineFrame);
         }
@@ -268,9 +300,12 @@ public class NetFefObsidian implements NetFefNetwork {
     }
     @Override
     public void sendData(Frame frame, ReplyListener replyListener) {
+        if(frame.hasParameter(PARAM_NAME_REPLY)) {
+            throw new IllegalStateException("Parameter '" + PARAM_NAME_REPLY + "' is occupied by the network protocol. Please don't use this parameter.");
+        }
         if(replyListener != null) {
             int replyReference = generateReplyReference();
-            frame.addParameter(new Parameter('r', ParameterType.INTEGER, replyReference));
+            frame.addParameter(new Parameter(PARAM_NAME_REPLY, ParameterType.INTEGER, replyReference));
             replyMap.put(replyReference, new ReplyInfo(frame, replyListener));
         }
         sendQueue.add(frame);
@@ -288,6 +323,8 @@ public class NetFefObsidian implements NetFefNetwork {
 
     @Override
     public void shutdown() {
+        physicalLayer.shutdown();
+
         running = false;
         sendThread.interrupt();
         joinOfferThread.interrupt();

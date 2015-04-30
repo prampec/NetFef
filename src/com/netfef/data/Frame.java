@@ -13,6 +13,7 @@ package com.netfef.data;
 
 import com.netfef.util.FormatHelper;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class Frame {
     }
 
     public void setTargetAddress(byte[] targetAddress) {
-        this.targetAddress = targetAddress;
+        this.targetAddress = Arrays.copyOf(targetAddress, targetAddress.length);
     }
 
     public byte[] getSenderAddress() {
@@ -57,7 +58,7 @@ public class Frame {
     }
 
     public void setSenderAddress(byte[] senderAddress) {
-        this.senderAddress = senderAddress;
+        this.senderAddress = Arrays.copyOf(senderAddress, senderAddress.length);
     }
 
     public Parameter getSubject() {
@@ -121,7 +122,12 @@ public class Frame {
     }
 
     public void addParameter(Parameter parameter) {
-        parameters.put(parameter.getParameterName(), parameter);
+        char parameterName = parameter.getParameterName();
+        if(parameters.containsKey(parameterName)) {
+            Parameter oldParameter = parameters.get(parameterName);
+            throw new IllegalStateException("Parameter with name '" + parameterName + "' already exists in the frame. Existing:" + oldParameter + ", Now try to add:" + parameter);
+        }
+        parameters.put(parameterName, parameter);
     }
 
     public void setParameters(List<Parameter> parameters) {

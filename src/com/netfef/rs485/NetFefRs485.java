@@ -18,6 +18,7 @@ import com.netfef.protocol.NetFefNetwork;
 import com.netfef.protocol.NetFefNetworkConfig;
 import com.netfef.protocol.NetFefPhysicalLayer;
 import com.netfef.protocol.NetFefReceiveListener;
+import com.netfef.protocol.obsidian.NetFefObsidian;
 import com.netfef.protocol.obsidian.NetFefObsidianConfig;
 import com.netfef.util.FormatHelper;
 import com.pi4j.io.gpio.*;
@@ -191,9 +192,9 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
                 return false;
             }
             byte[] read = serial.read();
-            if(LOG.isInfoEnabled()) {
+            if(LOG.isTraceEnabled()) {
                 String s = FormatHelper.byteArrayToString(read);
-                LOG.info("Echo found " + s);
+                LOG.trace("Echo found " + s);
             }
             if(!Arrays.equals(bytesToSend, read)) {
                 LOG.info("Collision detected.");
@@ -259,7 +260,7 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
 
     @Override
     public NetFefNetworkConfig getConfig(Class<? extends NetFefNetwork> networkClass) {
-        if(NetFefObsidianConfig.class.isAssignableFrom(networkClass)) {
+        if(NetFefObsidian.class.isAssignableFrom(networkClass)) {
             return new NetFefRs485ObsidianConfig();
         }
         else {
