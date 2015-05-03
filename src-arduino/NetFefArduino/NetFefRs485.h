@@ -29,24 +29,25 @@
 #endif // -- COMM_DATA_FRAME_LENGTH
 
 
-class NetFefRs485 : public Task, public INetFefNetwork
+class NetFefRs485 : public Task, public INetFefPhysicalLayer
 {
   public:
     NetFefRs485(HardwareSerial* serial, int writeEnabledPin);
-    void begin();
-    boolean dataAvailable();
-    byte* readFrame();
-    void addDataToQueue(NetFefFrameBuilder* frameBuilder);
+    virtual void begin();
+    virtual boolean dataAvailable();
+    virtual byte* readFrame();
+    virtual void addDataToQueue(NetFefFrameBuilder* frameBuilder);
     boolean canSend();
     void setDebug(Print* print);
+    virtual unsigned int getFrameLength() { return COMM_DATA_FRAME_LENGTH; };  // -- TODO: wanted to avoid dynamic buffer allocation.
   
   private:
     boolean _writeFrameCheckCollision(byte* data, int length);
     static void step(Task* me);
     static void copyDataValues(byte* from, byte* to);
-    byte _readBuffer[COMM_DATA_FRAME_LENGTH];
-    byte _commQueue[COMM_QUEUE_LENGTH][COMM_DATA_FRAME_LENGTH];
-    int _frameSizes[COMM_DATA_FRAME_LENGTH];
+    byte _readBuffer[COMM_DATA_FRAME_LENGTH];  // -- TODO: wanted to avoid dynamic buffer allocation.
+    byte _commQueue[COMM_QUEUE_LENGTH][COMM_DATA_FRAME_LENGTH];  // -- TODO: wanted to avoid dynamic buffer allocation.
+    int _frameSizes[COMM_DATA_FRAME_LENGTH];  // -- TODO: wanted to avoid dynamic buffer allocation.
     unsigned short _queueSize = 0;
     void _debug(char* message);
     int _writeEnabledPin;

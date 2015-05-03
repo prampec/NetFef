@@ -38,7 +38,7 @@ public class NetFefObsidianTester {
     private void run() throws IOException {
         NetFefObsidian netFefObsidian = new NetFefObsidian();
         ConsoleTestPhysicalLayer physicalLayer = new ConsoleTestPhysicalLayer(TARGET_ADDRESS);
-        netFefObsidian.init(physicalLayer, NetFefDataHelper.MASTER_ADDRESS, peer -> {
+        netFefObsidian.init(physicalLayer, 12345L, NetFefDataHelper.MASTER_ADDRESS, peer -> {
             System.out.println("Peer registered: " + peer + " Actite:" + peer.isActive());
         });
         netFefObsidian.setListener(new NetFefReceiveListener() {
@@ -54,7 +54,7 @@ public class NetFefObsidianTester {
             }
         });
 
-        System.out.println("Started. Enter command! Commands are: j1, j2, J, p");
+        System.out.println("Started. Enter command! Commands are: j, J, p");
         readAndProcessCommands(netFefObsidian, physicalLayer);
 
         System.out.println("Stopping...");
@@ -72,12 +72,9 @@ public class NetFefObsidianTester {
             }
             else {
                 Frame frame = null;
-                if(line.startsWith("j1")) {
+                if(line.startsWith("j")) {
                     frame = new Frame(TARGET_ADDRESS, 'n', 'j');
-                }
-                else if(line.startsWith("j2")) {
-                    frame = new Frame(TARGET_ADDRESS, 'n', 'j');
-                    frame.addParameter(new Parameter('i', ParameterType.INTEGER, 123));
+                    frame.addParameter(new Parameter('i', ParameterType.LONG, 123));
                 }
                 else if(line.startsWith("J")) {
                     frame = new Frame(TARGET_ADDRESS, 'n', 'J');

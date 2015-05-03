@@ -12,15 +12,11 @@
 #include <Task.h>
 #include <BlinkTask.h>
 #include <LiquidCrystal.h>
-#include <EEPROM.h>
 
 #include "NetFefData.h"
 #define COMM_QUEUE_LENGTH 5
 #define COMM_DATA_FRAME_LENGTH 60
 #include "NetFefRs485.h"
-#include "NetFefObsidian.h"
-
-#define EEPROM_ADDRESS_FOR_REGISTRATION_INFO 400
 
 #define FIRST_CHAR 'A'
 #define LAST_CHAR FIRST_CHAR + 25
@@ -33,25 +29,25 @@
 const byte MYADDRESS[2] = { 0x12, 0xab };
 
 LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
-NetFefRs485 netFefRs485(&Serial, WRITE_ENABLE_PIN);
-NetFefObsidian netFefNetwork(&netFefRs485, onFrameReceived, loadRegistrationInfo, saveRegistrationInfo);
 Task testTask(WRITE_DELAY_MS_MAX, test);
-RegistrationInfo registrationInfo;
+Task readTask(0, readerJob);
+NetFefRs485 netFefRs485(&Serial, WRITE_ENABLE_PIN);
 
 void setup() {
-  netFefNetwork.begin();
+  netFefRs485.begin();
+  netFefRs485.setDebug(&lcd);
   lcd.begin(16, 2);
   lcd.print("ready");
   SoftTimer.add(&testTask);
+  SoftTimer.add(&readTask);
   pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(LCD_BACKLIGHT_PIN, LOW); // -- Turn on LCD backlight
 }
 
 char counter = FIRST_CHAR;
 byte data[COMM_DATA_FRAME_LENGTH];
-NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH);
 void test(Task* me) {
-  frameBuilder.reset(MYADDRESS, MASTER_ADDRESS, 't', 't');
+  NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH, MYADDRESS, MASTER_ADDRESS, 't', 't');
   lcd.setCursor(0,0);
   if(!netFefRs485.canSend()) {
     lcd.print("Cannot send");
@@ -72,7 +68,7 @@ void test(Task* me) {
   frameBuilder.addParameter('f', 'I', -125 * counter);
   frameBuilder.addParameter('g', 'l', (unsigned long)12345 * counter);
   frameBuilder.addParameter('h', 'L', -12345L * counter);
-  netFefNetwork.sendFrame(&frameBuilder);
+  netFefRs485.addDataToQueue(&frameBuilder);
 
   counter += 1;
   if(counter > LAST_CHAR) {
@@ -82,39 +78,32 @@ void test(Task* me) {
   me->setPeriodMs( random(WRITE_DELAY_MS_MAX) + MINIMAL_FRAME_SPACING_MS );
 }
 
-RegistrationInfo* loadRegistrationInfo() {
-  // -- Load from EEPROM
-  EEPROM.get(EEPROM_ADDRESS_FOR_REGISTRATION_INFO, registrationInfo);
-  return &registrationInfo;
-}
-
-void saveRegistrationInfo(RegistrationInfo* ri) {
-  // -- save to EEPROM
-  EEPROM.put(EEPROM_ADDRESS_FOR_REGISTRATION_INFO, *ri);
-}
-
-NetFefFrameBuilder* onFrameReceived(NetFefFrameReader* frameReader, NetFefFrameBuilder* frameBuilder) {
-  lcd.print(">");
-  byte *p = frameReader->getCommand();
-  while(p != 0) {
-    printParameter(p);
-    p = frameReader->getNextParameter(p);
-  }
-  lcd.print("  ");
-  if(frameReader->isSubjectAndCommand('n', 'p')) {
-    return frameBuilder;
-  } else {
-    return 0;
+void readerJob(Task* me) {
+  if(netFefRs485.dataAvailable()) {
+    lcd.setCursor(0,1);
+    byte* data = netFefRs485.readFrame();
+    NetFefFrameReader netFefFrameReader = NetFefFrameReader(data, COMM_DATA_FRAME_LENGTH);
+//netFefFrameReader._debug = &lcd;
+    if(netFefFrameReader.isForMe(MYADDRESS)) {
+      lcd.print(">");
+      byte *p = netFefFrameReader.getCommand();
+      while(p != 0) {
+        printParameter(p);
+        p = netFefFrameReader.getNextParameter(p);
+      }
+      lcd.print("  ");
+    } else {
+      lcd.print("Not for me     ");
+    }
   }
 }
 
-NetFefParameter parameter = NetFefParameter();
 void printParameter(byte* p) {
   if(p == 0) {
     lcd.print("Incompatible frame   ");
     return;
   }
-  parameter.reset(p);
+  NetFefParameter parameter = NetFefParameter(p);
 //parameter._debug = &lcd;
 
 //  lcd.print(parameter.getName());

@@ -25,7 +25,7 @@ public interface NetFefNetwork {
 
     void setListener(NetFefReceiveListener listener);
 
-    void init(NetFefPhysicalLayer physicalLayer, byte[] myAddress, PeerPersister peerPersister);
+    void init(NetFefPhysicalLayer physicalLayer, long networkIdentity, byte[] myAddress, PeerPersister peerPersister);
 
     void sendData(Frame frame);
     void sendData(Frame frame, ReplyListener replyListener);

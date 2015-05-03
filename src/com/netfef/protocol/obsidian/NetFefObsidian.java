@@ -52,11 +52,13 @@ public class NetFefObsidian implements NetFefNetwork {
     private Thread pollThread;
     private HashMapLs<Address, Peer> registrationLookup = new HashMapLs<>();
     private Map<Integer, ReplyInfo> replyMap = new ConcurrentHashMap<>();
+    private long networkIdentity;
 
-    public void init(NetFefPhysicalLayer physicalLayer, byte[] myAddress, PeerPersister peerPersister) {
+    public void init(NetFefPhysicalLayer physicalLayer, long networkIdentity, byte[] myAddress, PeerPersister peerPersister) {
         this.physicalLayer = physicalLayer;
         this.myAddress = myAddress;
         this.peerPersister = peerPersister;
+        this.networkIdentity = networkIdentity;
         config = (NetFefObsidianConfig)physicalLayer.getConfig(this.getClass());
         try {
             physicalLayer.init();
@@ -132,6 +134,7 @@ public class NetFefObsidian implements NetFefNetwork {
     private void joinOffer() {
         while(this.running) {
             Frame joinOffer = new Frame(NetFefDataHelper.BROADCAST_ADDRESS, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'j');
+            joinOffer.addParameter(new Parameter('n', ParameterType.LONG, this.networkIdentity));
             joinOffer.addParameter(new Parameter('w', ParameterType.INTEGER, 30));
             this.sendData(joinOffer);
 
@@ -242,16 +245,13 @@ public class NetFefObsidian implements NetFefNetwork {
 
     private void processJoinRequest(Frame joinRequest) {
         byte[] senderAddress = joinRequest.getSenderAddress();
-        long registrationId = 0;
-        if (joinRequest.hasParameter('i')) {
-            registrationId = joinRequest.getParameter('i').getLongValue();
-        }
+        Long registrationId = joinRequest.getParameter('i').getLongValue();
 
         Address address = new Address(senderAddress);
         Peer registeredPeer;
         registeredPeer = registrationLookup.get(address);
         if ((registeredPeer == null) || (registeredPeer.getRegistrationId() == registrationId)) {
-            final Peer peer = registeredPeer == null ? new Peer(senderAddress, generateRegistrationId()) : registeredPeer;
+            final Peer peer = registeredPeer == null ? new Peer(senderAddress, registrationId) : registeredPeer;
 
             Frame joinFrame = new Frame(senderAddress, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'J');
             joinFrame.addParameter(new Parameter('d', ParameterType.CHAR, 'a'));
@@ -283,10 +283,6 @@ public class NetFefObsidian implements NetFefNetwork {
 
             this.sendData(joinDeclineFrame);
         }
-    }
-
-    private long generateRegistrationId() {
-        return new Date().getTime();
     }
 
     @Override

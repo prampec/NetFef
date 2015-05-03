@@ -8,25 +8,21 @@
  * This product is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license.
  * Please contact the author for a special agreement in case you want to use this creation for commercial purposes!
  */
-#ifndef INetFefNetwork_H
-#define INetFefNetwork_H
+#ifndef INetFefPhysicalLayer_H
+#define INetFefPhysicalLayer_H
 
 #include <Arduino.h>
-#include "INetFefPhysicalLayer.h"
+#include "NetFefData.h"
 
-typedef struct RegistrationInfo
-{
-  byte myAddress[2];
-  unsigned long registrationId;
-  unsigned long networkId;
-};
-
-class INetFefNetwork
+class INetFefPhysicalLayer
 {
   public:
     virtual void begin();
-    virtual boolean sendFrame(NetFefFrameBuilder* frameBuilder);
+    virtual boolean dataAvailable();
+    virtual byte* readFrame();
+    virtual void addDataToQueue(NetFefFrameBuilder* frameBuilder);
+    virtual boolean canSend();
+    virtual unsigned int getFrameLength();
 };
 
-
-#endif // -- INetFefNetwork_H
+#endif // -- INetFefPhysicalLayer_H

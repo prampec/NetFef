@@ -13,9 +13,12 @@
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen, const byte* myAddress, const byte* targetAddress, char subject, char command) {
+NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen) {
   this->_bytes = buffer;
   this->_buffLen = buffLen;
+}
+
+void NetFefFrameBuilder::reset(const byte* myAddress, const byte* targetAddress, char subject, char command) {
   this->_pos = 2; // -- Leave the first two bytes for the frame length.
 
   this->_addByte(2);
@@ -170,9 +173,11 @@ boolean NetFefFrameBuilder::_addInt4(unsigned long value) {
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameReader::NetFefFrameReader(byte* frame, unsigned int frameMaxSize) {
-  this->_bytes = frame;
+NetFefFrameReader::NetFefFrameReader(unsigned int frameMaxSize) {
   this->_frameMaxSize = frameMaxSize;
+}
+void NetFefFrameReader::reset(byte* frame) {
+  this->_bytes = frame;
   
   this->frameLength = this->getInt(this->_bytes);
   this->targetAddressLength = this->_bytes[2];
@@ -208,11 +213,12 @@ byte* NetFefFrameReader::getSenderAddress() {
 byte* NetFefFrameReader::getParameter(char parameterName) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
+  NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount; i++) {
     if(this->_bytes[pos] == parameterName) {
       return this->_bytes + pos;
     } else {
-      NetFefParameter parameter = NetFefParameter(this->_bytes + pos);
+      parameter.reset(this->_bytes + pos);
       int paramSpace = parameter.calculateSpace();
       if(paramSpace == -1) {
         // -- Unsupported parameter type in frame, we cannot continue.
@@ -227,8 +233,9 @@ if(this->_debug != NULL) this->_debug->print(this->_paramCount);
 byte* NetFefFrameReader::getNextParameter(byte* previous) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
+  NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount-1; i++) {
-    NetFefParameter parameter = NetFefParameter(this->_bytes + pos);
+    parameter.reset(this->_bytes + pos);
     int paramSpace = parameter.calculateSpace();
 if(this->_debug != NULL) { this->_debug->print('-'); this->_debug->print(paramSpace); }
     if(paramSpace == -1) {
@@ -255,13 +262,28 @@ unsigned int NetFefFrameReader::getInt(byte* position) {
   return (unsigned int)position[0] << 8 | (unsigned int)position[1];
 }
 
+boolean NetFefFrameReader::isSubjectAndCommand(char subject, char command) {
+  return this->isSubject(subject) && this->isCommand(command);
+}
+boolean NetFefFrameReader::isSubject(char subject) {
+  NetFefParameter parameter = NetFefParameter();
+  parameter.reset(this->getSubject());
+  return parameter.isType('c') && (parameter.getCharValue() == subject);
+}
+boolean NetFefFrameReader::isCommand(char command) {
+  NetFefParameter parameter = NetFefParameter();
+  parameter.reset(this->getCommand());
+  return parameter.isType('c') && (parameter.getCharValue() == command);
+}
 
 
 
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefParameter::NetFefParameter(byte* parameterPointer) {
+NetFefParameter::NetFefParameter() {
+}
+void NetFefParameter::reset(byte* parameterPointer) {
   this->_pp = parameterPointer;
 }
 
