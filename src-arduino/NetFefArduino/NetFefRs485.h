@@ -54,6 +54,8 @@ class NetFefRs485 : public Task, public INetFefPhysicalLayer
     HardwareSerial* _serial;
     void _addDataToQueue(byte* data, int length);
     Print* _debugOut = NULL;
+    unsigned long _lastAction = 0;
+    static boolean timePassed(unsigned long now, unsigned long start, unsigned long diff);
 };
 
 #endif // -- NetFefRs485_H

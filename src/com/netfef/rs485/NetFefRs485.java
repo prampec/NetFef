@@ -97,7 +97,7 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
                     Thread.sleep(millis);
                 }
                 catch (InterruptedException e) {
-                    LOG.error("Interrupted", e);
+                    LOG.trace("Interrupted");
                 }
             }
         });

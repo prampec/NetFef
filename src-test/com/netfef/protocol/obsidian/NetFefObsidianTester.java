@@ -39,7 +39,7 @@ public class NetFefObsidianTester {
         NetFefObsidian netFefObsidian = new NetFefObsidian();
         ConsoleTestPhysicalLayer physicalLayer = new ConsoleTestPhysicalLayer(TARGET_ADDRESS);
         netFefObsidian.init(physicalLayer, 12345L, NetFefDataHelper.MASTER_ADDRESS, peer -> {
-            System.out.println("Peer registered: " + peer + " Actite:" + peer.isActive());
+            System.out.println("Peer registered: " + peer + " Active:" + peer.isActive());
         });
         netFefObsidian.setListener(new NetFefReceiveListener() {
             @Override

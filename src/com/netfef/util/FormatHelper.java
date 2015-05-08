@@ -84,7 +84,7 @@ public class FormatHelper {
         }
         StringBuilder sb = new StringBuilder();
         for (byte aByte : bytes) {
-            sb.append(FormatHelper.toHexString(aByte));
+            sb.append(FormatHelper.toHexString2(aByte));
         }
         return sb.toString();
     }

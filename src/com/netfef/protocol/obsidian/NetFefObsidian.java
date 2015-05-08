@@ -69,7 +69,9 @@ public class NetFefObsidian implements NetFefNetwork {
         physicalLayer.setListener(new NetFefReceiveListener() {
             @Override
             public void dataReceived(Frame frame) {
-                processReceivedFrame(frame);
+                if(frame != null) {
+                    processReceivedFrame(frame);
+                }
             }
 
             @Override
@@ -87,6 +89,7 @@ public class NetFefObsidian implements NetFefNetwork {
         pollThread = new Thread(this::poll);
         pollThread.start();
 
+        LOG.info("Network initialized with id " + networkIdentity);
     }
 
     private void poll() {
@@ -99,6 +102,7 @@ public class NetFefObsidian implements NetFefNetwork {
                 Date now = new Date();
                 if((currentPeer.lastSeen.getTime() + 2*config.getNextPollMaxSecs()*1000) < now.getTime()) {
                     currentPeer.setActive(false);
+                    LOG.info("Peer " + currentPeer + " is marked as inactive.");
                     peerPersister.persist(currentPeer);
                 }
 
@@ -109,8 +113,20 @@ public class NetFefObsidian implements NetFefNetwork {
                     this.sendData(frame, new ReplyListener() {
                         @Override
                         public void onReply(Frame originalFrame, Frame repliedFrame) {
+                            if(LOG.isDebugEnabled()) {
+                                LOG.debug("Peer " + finalCurrentRegistration + " is still active.");
+                            }
                             updatePeer(repliedFrame, finalCurrentRegistration);
-                            listener.dataReceived(frame);
+                            if (repliedFrame.getSubject().getChar() != 'n') {
+                                // -- Not a network frame, forward it to listener.
+                                listener.dataReceived(repliedFrame);
+                            }
+                        }
+
+                        @Override
+                        public void onError(Frame originalFrame) {
+                            LOG.info("Peer " + finalCurrentRegistration + " does not replied Poll.");
+                            super.onError(originalFrame);
                         }
                     });
                 }
@@ -135,7 +151,7 @@ public class NetFefObsidian implements NetFefNetwork {
         while(this.running) {
             Frame joinOffer = new Frame(NetFefDataHelper.BROADCAST_ADDRESS, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'j');
             joinOffer.addParameter(new Parameter('n', ParameterType.LONG, this.networkIdentity));
-            joinOffer.addParameter(new Parameter('w', ParameterType.INTEGER, 30));
+            joinOffer.addParameter(new Parameter('w', ParameterType.INTEGER, 10)); // -- TODO: config
             this.sendData(joinOffer);
 
             sleep(config.getJoinOfferRepeatSecs() * 1000);
@@ -158,6 +174,9 @@ public class NetFefObsidian implements NetFefNetwork {
                 }
                 if(onGoingSend.retryCount >= config.getReplyRepeatCount()) {
                     // -- We already retried the send, we will not try it any more.
+                    if(LOG.isTraceEnabled()) {
+                        LOG.trace("Failed to send frame, as no reply received: " + onGoingSend.frame);
+                    }
                     onGoingSendQueue.remove(onGoingSend);
                     onGoingSendLookup.remove(waitingReplyFor);
                     Parameter replyReferenceParameter = waitingReplyFor.getParameter(PARAM_NAME_REPLY);
@@ -175,6 +194,9 @@ public class NetFefObsidian implements NetFefNetwork {
                 if(waitingReplyFor == null) {
                     // -- Send the message
                     Frame frameToSend = sendQueue.poll();
+                    if(LOG.isTraceEnabled()) {
+                        LOG.trace("Sending message: " + frameToSend);
+                    }
                     physicalLayer.sendData(frameToSend, myAddress);
                     if(frameToSend.hasParameter(PARAM_NAME_REPLY)) {
                         this.waitingReplyFor = frameToSend;
@@ -186,6 +208,9 @@ public class NetFefObsidian implements NetFefNetwork {
                 OnGoingSend onGoingSend = onGoingSendQueue.poll();
                 Frame frameToSend = onGoingSend.frame;
                 onGoingSend.retryCount += 1;
+                if(LOG.isTraceEnabled()) {
+                    LOG.trace("Resending message: " + frameToSend);
+                }
                 physicalLayer.sendData(frameToSend, myAddress);
                 this.waitingReplyFor = frameToSend;
                 this.waitStartTime = now;
@@ -207,6 +232,9 @@ public class NetFefObsidian implements NetFefNetwork {
     }
 
     private void processReceivedFrame(Frame frame) {
+        if(LOG.isTraceEnabled()) {
+            LOG.trace("Frame received: " + frame);
+        }
         if(registrationLookup.containsKey(new Address(frame.getSenderAddress()))) {
             Peer peer = registrationLookup.get(new Address(frame.getSenderAddress()));
             if(!peer.isActive()) {
@@ -220,6 +248,9 @@ public class NetFefObsidian implements NetFefNetwork {
             Integer replyReference = replyReferenceParameter.getIntValue();
             ReplyInfo replyInfo = replyMap.get(replyReference);
             if(replyInfo != null) {
+                if(LOG.isTraceEnabled()) {
+                    LOG.trace("Reply arrived for original message:" + replyInfo.originalFrame);
+                }
                 replyMap.remove(replyReference);
                 Frame originalFrame = replyInfo.originalFrame;
                 waitingReplyFor = null;
@@ -252,6 +283,9 @@ public class NetFefObsidian implements NetFefNetwork {
         registeredPeer = registrationLookup.get(address);
         if ((registeredPeer == null) || (registeredPeer.getRegistrationId() == registrationId)) {
             final Peer peer = registeredPeer == null ? new Peer(senderAddress, registrationId) : registeredPeer;
+            if(LOG.isDebugEnabled()) {
+                LOG.debug("Peer " + peer + " wants to join the network." + (registeredPeer == null ? " (new peer)" : ""));
+            }
 
             Frame joinFrame = new Frame(senderAddress, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'J');
             joinFrame.addParameter(new Parameter('d', ParameterType.CHAR, 'a'));
@@ -263,6 +297,7 @@ public class NetFefObsidian implements NetFefNetwork {
                     peer.setActive(true);
                     peer.setDescription(repliedFrame.getParameter('d').getStringValue());
                     peer.setVersion(repliedFrame.getParameter('v').getStringValue());
+                    LOG.debug("Peer " + peer + " joined the network.");
                     updatePeer(repliedFrame, peer);
                     registrationLookup.put(address, peer);
                     peerPersister.persist(peer);
@@ -277,6 +312,9 @@ public class NetFefObsidian implements NetFefNetwork {
         }
         else {
             // -- Address already in use
+            if (LOG.isTraceEnabled()) {
+                LOG.warn("Peer wants to join the network, but address " + address + " already in use.");
+            }
             Frame joinDeclineFrame = new Frame(senderAddress, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'J');
             joinDeclineFrame.addParameter(new Parameter('d', ParameterType.CHAR, 'd'));
             joinDeclineFrame.addParameter(new Parameter('i', ParameterType.INTEGER, registrationId));
@@ -304,13 +342,16 @@ public class NetFefObsidian implements NetFefNetwork {
             frame.addParameter(new Parameter(PARAM_NAME_REPLY, ParameterType.INTEGER, replyReference));
             replyMap.put(replyReference, new ReplyInfo(frame, replyListener));
         }
+        if(LOG.isTraceEnabled()) {
+            LOG.trace("Preparing frame to send" + (replyListener == null ? "" : " with reply") + ": " + frame);
+        }
         sendQueue.add(frame);
     }
 
     private int generateReplyReference() {
         while(true) {
             Random random = new Random();
-            int nextInt = random.nextInt(1<<17);
+            int nextInt = random.nextInt(1<<16);
             if(!replyMap.containsKey(nextInt)) {
                 return nextInt;
             }
@@ -382,6 +423,11 @@ public class NetFefObsidian implements NetFefNetwork {
         @Override
         public int hashCode() {
             return Arrays.hashCode(value);
+        }
+
+        @Override
+        public String toString() {
+            return FormatHelper.byteArrayToString3(value);
         }
     }
 

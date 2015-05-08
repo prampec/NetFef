@@ -90,9 +90,9 @@ public class Frame {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("From:");
-        addBytes(sb, senderAddress);
+        addBytes2(sb, senderAddress);
         sb.append(" To:");
-        addBytes(sb, targetAddress);
+        addBytes2(sb, targetAddress);
         sb.append(" Subj:");
         sb.append(subject);
         sb.append(" Cmd:");
@@ -117,6 +117,16 @@ public class Frame {
         }
         for (byte aByte : bytes) {
             sb.append(FormatHelper.toHexString(aByte));
+        }
+        return sb;
+    }
+
+    private StringBuilder addBytes2(StringBuilder sb, byte[] bytes) {
+        if(bytes == null) {
+            return sb.append("N/A");
+        }
+        for (byte aByte : bytes) {
+            sb.append(FormatHelper.toHexString2(aByte));
         }
         return sb;
     }

@@ -16,7 +16,7 @@
 
 #include "NetFefData.h"
 #define COMM_QUEUE_LENGTH 5
-#define COMM_DATA_FRAME_LENGTH 60
+#define COMM_DATA_FRAME_LENGTH 80
 #include "NetFefRs485.h"
 #include "NetFefObsidian.h"
 
@@ -26,7 +26,7 @@
 #define LAST_CHAR FIRST_CHAR + 25
 
 //#define WRITE_DELAY_MS_MAX 100
-#define WRITE_DELAY_MS_MAX 2000
+#define WRITE_DELAY_MS_MAX 10000
 #define WRITE_ENABLE_PIN 2
 #define LCD_BACKLIGHT_PIN 10
 
@@ -45,38 +45,42 @@ void setup() {
   SoftTimer.add(&testTask);
   pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(LCD_BACKLIGHT_PIN, LOW); // -- Turn on LCD backlight
+  
+  netFefNetwork._debug = &lcd;
 }
 
 char counter = FIRST_CHAR;
 byte data[COMM_DATA_FRAME_LENGTH];
 NetFefFrameBuilder frameBuilder = NetFefFrameBuilder(data, COMM_DATA_FRAME_LENGTH);
 void test(Task* me) {
-  frameBuilder.reset(MYADDRESS, MASTER_ADDRESS, 't', 't');
-  lcd.setCursor(0,0);
-  if(!netFefRs485.canSend()) {
-    lcd.print("Cannot send");
-    me->setPeriodMs(5);
-    return;
-  }
-  lcd.print("Sending ");
-  lcd.print(counter);
-  lcd.print("   ");
-  char sbuf[10];
-  sprintf(sbuf, "aa%dbb", counter);
-//frameBuilder._debug = &lcd;
-
-  frameBuilder.addParameter('a', 'c', &counter);
-  frameBuilder.addParameter('b', 's', sbuf);
-  frameBuilder.addParameter('d', 'S', sbuf);
-  frameBuilder.addParameter('e', 'i', (unsigned int)123 * counter);
-  frameBuilder.addParameter('f', 'I', -125 * counter);
-  frameBuilder.addParameter('g', 'l', (unsigned long)12345 * counter);
-  frameBuilder.addParameter('h', 'L', -12345L * counter);
-  netFefNetwork.sendFrame(&frameBuilder);
-
-  counter += 1;
-  if(counter > LAST_CHAR) {
-    counter = FIRST_CHAR;
+  if(netFefNetwork.joinedToNetwork) {
+    frameBuilder.reset(MYADDRESS, MASTER_ADDRESS, 't', 't');
+    lcd.setCursor(0,0);
+    if(!netFefRs485.canSend()) {
+      lcd.print("Cannot send");
+      me->setPeriodMs(5);
+      return;
+    }
+    lcd.print("Sending ");
+    lcd.print(counter);
+    lcd.print("   ");
+    char sbuf[10];
+    sprintf(sbuf, "aa%dbb", counter);
+  //frameBuilder._debug = &lcd;
+  
+    frameBuilder.addParameter('a', 'c', &counter);
+    frameBuilder.addParameter('b', 's', sbuf);
+    frameBuilder.addParameter('d', 'S', sbuf);
+    frameBuilder.addParameter('e', 'i', (unsigned int)123 * counter);
+    frameBuilder.addParameter('f', 'I', -125 * counter);
+    frameBuilder.addParameter('g', 'l', (unsigned long)12345 * counter);
+    frameBuilder.addParameter('h', 'L', -12345L * counter);
+    netFefNetwork.sendFrame(&frameBuilder);
+  
+    counter += 1;
+    if(counter > LAST_CHAR) {
+      counter = FIRST_CHAR;
+    }
   }
 
   me->setPeriodMs( random(WRITE_DELAY_MS_MAX) + MINIMAL_FRAME_SPACING_MS );
@@ -90,68 +94,98 @@ RegistrationInfo* loadRegistrationInfo() {
 
 void saveRegistrationInfo(RegistrationInfo* ri) {
   // -- save to EEPROM
+lcd.print("$");
   EEPROM.put(EEPROM_ADDRESS_FOR_REGISTRATION_INFO, *ri);
 }
 
 NetFefFrameBuilder* onFrameReceived(NetFefFrameReader* frameReader, NetFefFrameBuilder* frameBuilder) {
-  lcd.print(">");
-  byte *p = frameReader->getCommand();
-  while(p != 0) {
-    printParameter(p);
-    p = frameReader->getNextParameter(p);
-  }
-  lcd.print("  ");
   if(frameReader->isSubjectAndCommand('n', 'p')) {
     return frameBuilder;
   } else {
+    lcd.clear();
+  lcd.print(">");
+  /*
+//frameReader->_debug = &lcd;
+lcd.setCursor(0,0);
+  byte *p = frameReader->getSubject();
+  while(p != 0) {
+lcd.setCursor(0,1);
+    printParameter(&lcd, p);
+lcd.setCursor(0,0);
+    p = frameReader->getNextParameter(p);
+  }
+  lcd.print("  ");
+lcd.setCursor(0,0);
     return 0;
+  */
   }
 }
 
 NetFefParameter parameter = NetFefParameter();
-void printParameter(byte* p) {
+void printParameter(Print* debug, byte* p) {
   if(p == 0) {
-    lcd.print("Incompatible frame   ");
+    debug->print("Incompatible frame   ");
     return;
   }
   parameter.reset(p);
-//parameter._debug = &lcd;
+//parameter._debug = debug;
 
-//  lcd.print(parameter.getName());
-//  lcd.print('(');
-  lcd.print(parameter.getType());
-//  lcd.print(")=");
-  lcd.print(":");
+//  debug->print(parameter.getName());
+//  debug->print('(');
+  debug->print(parameter.getType());
+//  debug->print(")=");
+  debug->print(":");
   if(parameter.isType('c')) {
     char v = parameter.getCharValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('B') || parameter.isType('b')) {
     byte v = parameter.getByteValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('i')) {
     unsigned int v = parameter.getIntValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('I')) {
     int v = parameter.getSignedIntValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('l')) {
     unsigned long v = parameter.getLongValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('L')) {
     long v = parameter.getLongValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else if(parameter.isType('s') || parameter.isType('S')) {
     char* v = parameter.getStringValue();
-    lcd.print(v);
+    debug->print(v);
   }
   else {
-    lcd.print('?');
+    debug->print('?');
   }
-  lcd.print(' ');
+  debug->print(' ');
 }
+
+/*
+NetFefFrameReader frameReader = NetFefFrameReader(60);
+void setup() {
+  Serial.begin(9600);
+  Serial.print("Startup.");
+  byte frame[] = {0x00, 0x1a, 0x02, 0x00 , 0x00 , 0x02 , 0x00 , 0x01 , 0x04 , 0x73 , 0x63 , 0x6e , 0x63 , 0x63 , 0x6a , 0x77 , 0x69 , 0x00 , 0x1e , 0x6e , 0x6c , 0x00 , 0x00 , 0x30 , 0x39 , (byte)0xd8};
+  frameReader.reset(frame);
+  frameReader._debug = &Serial;
+  Serial.print("Valid: ");
+  Serial.println( frameReader.isValid() );
+
+  byte *p = frameReader.getSubject();
+  while(p != 0) {
+    printParameter(&Serial, p);
+    Serial.println();
+    p = frameReader.getNextParameter(p);
+  }
+  
+}
+*/

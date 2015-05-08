@@ -109,7 +109,7 @@ public class Peer {
 
     @Override
     public String toString() {
-        return "[" + FormatHelper.byteArrayToString3(address) + "](" + registrationId + ')' + description;
+        return "[" + FormatHelper.byteArrayToString3(address) + "](" + registrationId + ") \"" + description +"\"";
     }
 
     public void setDescription(String description) {

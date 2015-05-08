@@ -14,6 +14,13 @@
 // ============================= ////////////////////////////////// ==================================
 
 NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen) {
+  this->init(buffer, buffLen);
+}
+
+NetFefFrameBuilder::NetFefFrameBuilder() {
+}
+
+void NetFefFrameBuilder::init(byte* buffer, unsigned int buffLen) {
   this->_bytes = buffer;
   this->_buffLen = buffLen;
 }
@@ -49,8 +56,8 @@ byte* NetFefFrameBuilder::getFrameBytes() {
   if((this->_pos+1) < this->_buffLen) {
     byte sum = 0;
     for(int i = 0; i<this->_pos; i++) {
-    sum += this->_bytes[i];
-  }
+      sum += this->_bytes[i];
+    }
     this->_bytes[this->_pos] = sum;
   }
   
@@ -58,7 +65,7 @@ byte* NetFefFrameBuilder::getFrameBytes() {
 }
 
 unsigned int NetFefFrameBuilder::getFrameLength() {
-  return this->_pos;
+  return this->_pos+1;
 }
 
 boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, char* value) {
@@ -174,16 +181,26 @@ boolean NetFefFrameBuilder::_addInt4(unsigned long value) {
 // ============================= ////////////////////////////////// ==================================
 
 NetFefFrameReader::NetFefFrameReader(unsigned int frameMaxSize) {
+  this->init(frameMaxSize);
+}
+NetFefFrameReader::NetFefFrameReader() {
+}
+void NetFefFrameReader::init(unsigned int frameMaxSize) {
   this->_frameMaxSize = frameMaxSize;
 }
+
 void NetFefFrameReader::reset(byte* frame) {
   this->_bytes = frame;
   
+if(this->_debug != NULL) this->_debug->print("%");
   this->frameLength = this->getInt(this->_bytes);
+if(this->_debug != NULL) this->_debug->print(this->frameLength);
   this->targetAddressLength = this->_bytes[2];
   this->sourceAddressLength = this->_bytes[3 + this->targetAddressLength];
   this->_paramCount = this->_bytes[4 + this->targetAddressLength + this->sourceAddressLength];
   this->_paramsPos = 5 + this->targetAddressLength + this->sourceAddressLength;
+if(this->_debug != NULL) this->_debug->print(this->_paramsPos);
+if(this->_debug != NULL) this->_debug->print((char)frame[this->_paramsPos]);
 }
 
 boolean NetFefFrameReader::isForMe(const byte* myAddress) {
@@ -215,6 +232,7 @@ byte* NetFefFrameReader::getParameter(char parameterName) {
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
   NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount; i++) {
+if(this->_debug != NULL) this->_debug->print((char)this->_bytes[pos]);
     if(this->_bytes[pos] == parameterName) {
       return this->_bytes + pos;
     } else {
@@ -225,6 +243,7 @@ if(this->_debug != NULL) this->_debug->print(this->_paramCount);
         return 0;
       }
       pos += paramSpace;
+if(this->_debug != NULL) this->_debug->print(paramSpace);
     }
   }
   return 0;

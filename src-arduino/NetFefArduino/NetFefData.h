@@ -19,6 +19,8 @@ const byte MASTER_ADDRESS[2] = { 0x00, 0x01 };
 class NetFefFrameBuilder {
   public:
     NetFefFrameBuilder(byte* buffer, unsigned int buffLen);
+    NetFefFrameBuilder();
+    void init(byte* buffer, unsigned int buffLen);
     void reset(const byte* myAddress, const byte* targetAddress, char subject, char command);
     boolean addParameter(char parameterName, char parameterType, char* value);
     boolean addParameter(char parameterName, char parameterType, unsigned int value);
@@ -42,6 +44,8 @@ class NetFefFrameBuilder {
 class NetFefFrameReader {
   public:
     NetFefFrameReader(unsigned int frameSize);
+    NetFefFrameReader();
+    void init(unsigned int frameSize);
     void reset(byte* frame);
     boolean isForMe(const byte* myAddress);
     boolean isValid();

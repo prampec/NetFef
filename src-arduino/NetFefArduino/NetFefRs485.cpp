@@ -71,6 +71,11 @@ void NetFefRs485::step(Task* task) {
     me->setPeriodMs(0);
     return;
   }
+  
+  if(!me->timePassed(millis(), me->_lastAction, MINIMAL_FRAME_SPACING_MS)) {
+    me->setPeriodMs( MINIMAL_FRAME_SPACING_MS );
+    return;
+  }
  
  // -- Data on queue
 //    debug("writing data ");
@@ -91,6 +96,7 @@ void NetFefRs485::step(Task* task) {
       // -- collision or other problem detected
       collisionPenalty = random(COLLISION_PENALTY_MAX_MS);
     }
+    me->_lastAction = millis();
     // -- Wait after write or error.
     me->setPeriodMs( MINIMAL_FRAME_SPACING_MS + collisionPenalty );
 digitalWrite(13, LOW);
@@ -135,6 +141,7 @@ byte* NetFefRs485::readFrame() {
       j += 1;
     }
   }
+  this->_lastAction = millis();
   return this->_readBuffer;
 }
 
@@ -147,4 +154,13 @@ void NetFefRs485::setDebug(Print* print) {
   this->_debugOut = print;
 }
 void NetFefRs485::_debug(char* message) {
+}
+
+boolean NetFefRs485::timePassed(unsigned long now, unsigned long start, unsigned long diff) {
+  unsigned long calc = start + diff;
+  return ((now >= calc) && (
+      (calc >= start) // -- Nothing was overflown.
+      || (start > now) // -- Both timer and interval-end overflows
+      ))
+    || ((now < start) && (start <= calc)); // -- timer overflows, but interval-end does not
 }

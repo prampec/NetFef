@@ -31,6 +31,8 @@ class NetFefObsidian : public Task, public INetFefNetwork
     virtual void begin();
     virtual boolean sendFrame(NetFefFrameBuilder* frameBuilder);
     NetFefFrameBuilder* prepareReply(NetFefFrameReader* frameReader, char subject, char command);
+    boolean joinedToNetwork;
+    Print* _debug = NULL;
 
   private:
     static void step(Task* me);
@@ -40,15 +42,14 @@ class NetFefObsidian : public Task, public INetFefNetwork
     void (*_saveRegistrationInfo)(RegistrationInfo* registrationInfo);
     RegistrationInfo *_registrationInfo;
     unsigned int _commDataFrameLength = COMM_DATA_FRAME_LENGTH;
-    boolean _joined;
-    unsigned int _lastPollTime;
+    unsigned long _lastPollTime;
     static boolean timePassed(unsigned long now, unsigned long start, unsigned long diff) ;
     unsigned long _joinStart;
     unsigned int _joinDelay;
     RegistrationInfo* _generateAddress();
     byte _outDataBuffer[COMM_DATA_FRAME_LENGTH]; // -- TODO: should me->_commDataFrameLength, but want to avoid dynamic buffer allocation.
-    NetFefFrameBuilder* _frameBuilder;
-    NetFefFrameReader* _frameReader;
+    NetFefFrameBuilder _frameBuilder = NetFefFrameBuilder();
+    NetFefFrameReader _frameReader = NetFefFrameReader();
     NetFefParameter _parameter = NetFefParameter();
 };
 
