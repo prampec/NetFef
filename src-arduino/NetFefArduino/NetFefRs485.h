@@ -40,6 +40,7 @@ class NetFefRs485 : public Task, public INetFefPhysicalLayer
     boolean canSend();
     void setDebug(Print* print);
     virtual unsigned int getFrameLength() { return COMM_DATA_FRAME_LENGTH; };  // -- TODO: wanted to avoid dynamic buffer allocation.
+    virtual char* getVersion() { return "0"; };
   
   private:
     boolean _writeFrameCheckCollision(byte* data, int length);

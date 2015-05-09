@@ -12,13 +12,28 @@
 #include "NetFefObsidian.h"
 
 NetFefObsidian::NetFefObsidian(INetFefPhysicalLayer* physicalLayer, NetFefFrameBuilder* (*onFrameReceived)(NetFefFrameReader* frameReader, NetFefFrameBuilder* frameBuilder),
-                                RegistrationInfo* (*loadRegistrationInfo)(), void (*saveRegistrationInfo)(RegistrationInfo* registrationInfo)
+                                RegistrationInfo* (*loadRegistrationInfo)(), void (*saveRegistrationInfo)(RegistrationInfo* registrationInfo),
+                                char* deviceId, unsigned int pollMeInterval, unsigned long randomSeedValue
                                 ) :
   Task(10, &(NetFefObsidian::step)) {
+
+  randomSeed(randomSeedValue);
+
   this->_physicalLayer = physicalLayer;
   this->_frameReceivedListener = onFrameReceived;
   this->_loadRegistrationInfo = loadRegistrationInfo;
   this->_saveRegistrationInfo = saveRegistrationInfo;
+  this->_deviceId = deviceId;
+  this->_pollMeInterval = pollMeInterval;
+  
+  strncpy(this->_versionString, NETFEF_DATA_VERSION, 9);
+  this->_versionString[9] = '\0';
+  strncat(this->_versionString, "/", 9 - strlen(this->_versionString));
+  strncat(this->_versionString, this->_physicalLayer->getVersion(), 9 - strlen(this->_versionString));
+  strncat(this->_versionString, "/", 9 - strlen(this->_versionString));
+  strncat(this->_versionString, this->getVersion(), 9 - strlen(this->_versionString));
+  
+  
   this->joinedToNetwork = false;
 
   this->_frameBuilder.init(this->_outDataBuffer, this->_commDataFrameLength);
@@ -27,7 +42,6 @@ NetFefObsidian::NetFefObsidian(INetFefPhysicalLayer* physicalLayer, NetFefFrameB
 }
 
 void NetFefObsidian::begin() {
-  randomSeed(analogRead(0)); // -- TODO: use some external random generator
   this->_physicalLayer->begin();
   this->_registrationInfo = this->_loadRegistrationInfo();
   if((this->_registrationInfo->myAddress[0] == 255) && (this->_registrationInfo->myAddress[1] = 255)) {
@@ -116,9 +130,9 @@ return;
               me->joinedToNetwork = true;
               me->_lastPollTime = now;
               NetFefFrameBuilder* frameBuilder = me->prepareReply(frameReader, 'n', 'J');
-              frameBuilder->addParameter('d', 's', "test device"); // -- TODO: load this from code
-              frameBuilder->addParameter('v', 's', "v0/0/0"); // -- TODO: load this from code
-              frameBuilder->addParameter('n', 'i', (unsigned int)30); // -- TODO: load this from code
+              frameBuilder->addParameter('d', 's', me->_deviceId);
+              frameBuilder->addParameter('v', 's', me->_versionString);
+              frameBuilder->addParameter('n', 'i', me->_pollMeInterval);
               if(me->_physicalLayer->canSend()) {
                 me->_physicalLayer->addDataToQueue(frameBuilder);
                 me->_saveRegistrationInfo(me->_registrationInfo);
@@ -141,7 +155,7 @@ if(me->_debug != NULL) me->_debug->print(me->_registrationInfo->registrationId);
           me->_lastPollTime = now;
 if(me->_debug != NULL) me->_debug->print("*");
           NetFefFrameBuilder* frameBuilder = me->_frameReceivedListener(frameReader, me->prepareReply(frameReader, 'n', 'p'));
-          frameBuilder->addParameter('n', 'i', (unsigned int)30); // -- TODO: load this from code
+          frameBuilder->addParameter('n', 'i', me->_pollMeInterval);
           if(me->_physicalLayer->canSend()) {
             me->_physicalLayer->addDataToQueue(frameBuilder);
           }

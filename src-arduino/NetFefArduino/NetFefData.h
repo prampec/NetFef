@@ -13,6 +13,8 @@
 
 #include <Arduino.h>
 
+#define NETFEF_DATA_VERSION "0"
+
 const byte BROADCAST_ADDRESS[2] = { 0x00, 0x00 };
 const byte MASTER_ADDRESS[2] = { 0x00, 0x01 };
 

@@ -23,6 +23,7 @@ class INetFefPhysicalLayer
     virtual void addDataToQueue(NetFefFrameBuilder* frameBuilder);
     virtual boolean canSend();
     virtual unsigned int getFrameLength();
+    virtual char* getVersion();
 };
 
 #endif // -- INetFefPhysicalLayer_H

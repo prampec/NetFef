@@ -34,7 +34,7 @@ const byte MYADDRESS[2] = { 0x12, 0xab };
 
 LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
 NetFefRs485 netFefRs485(&Serial, WRITE_ENABLE_PIN);
-NetFefObsidian netFefNetwork(&netFefRs485, onFrameReceived, loadRegistrationInfo, saveRegistrationInfo);
+NetFefObsidian netFefNetwork(&netFefRs485, onFrameReceived, loadRegistrationInfo, saveRegistrationInfo, "test device", 30, analogRead(0));
 Task testTask(WRITE_DELAY_MS_MAX, test);
 RegistrationInfo registrationInfo;
 

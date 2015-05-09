@@ -26,13 +26,14 @@ class NetFefObsidian : public Task, public INetFefNetwork
 {
   public:
     NetFefObsidian(INetFefPhysicalLayer* physicalLayer, NetFefFrameBuilder* (*onFrameReceived)(NetFefFrameReader* frameReader, NetFefFrameBuilder* frameBuilder),
-      RegistrationInfo* (*loadRegistrationInfo)(), void (*saveRegistrationInfo)(RegistrationInfo* registrationInfo)
-      );
+      RegistrationInfo* (*loadRegistrationInfo)(), void (*saveRegistrationInfo)(RegistrationInfo* registrationInfo),
+      char* deviceId, unsigned int pollMeInterval, unsigned long randomSeedValue);
     virtual void begin();
     virtual boolean sendFrame(NetFefFrameBuilder* frameBuilder);
     NetFefFrameBuilder* prepareReply(NetFefFrameReader* frameReader, char subject, char command);
     boolean joinedToNetwork;
     Print* _debug = NULL;
+    virtual char* getVersion() { return "0"; };
 
   private:
     static void step(Task* me);
@@ -51,6 +52,9 @@ class NetFefObsidian : public Task, public INetFefNetwork
     NetFefFrameBuilder _frameBuilder = NetFefFrameBuilder();
     NetFefFrameReader _frameReader = NetFefFrameReader();
     NetFefParameter _parameter = NetFefParameter();
+    char* _deviceId;
+    unsigned int _pollMeInterval;
+    char _versionString[10];
 };
 
 #endif // -- NetFefObsidian_H

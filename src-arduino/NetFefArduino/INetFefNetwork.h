@@ -26,6 +26,7 @@ class INetFefNetwork
   public:
     virtual void begin();
     virtual boolean sendFrame(NetFefFrameBuilder* frameBuilder);
+    virtual char* getVersion();
 };
 
 
