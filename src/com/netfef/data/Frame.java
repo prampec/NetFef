@@ -13,10 +13,7 @@ package com.netfef.data;
 
 import com.netfef.util.FormatHelper;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * <p>A communication package.</p>
@@ -28,7 +25,7 @@ public class Frame {
     byte[] senderAddress;
     Parameter subject;
     Parameter command;
-    Map<Character, Parameter> parameters = new HashMap<>();
+    Map<Character, List<Parameter>> parameters = new HashMap<>();
 
     Frame() {
     }
@@ -82,8 +79,12 @@ public class Frame {
         this.setCommand(new Parameter('c', ParameterType.CHAR, cmd));
     }
 
-    Map<Character, Parameter> getParameters() {
-        return parameters;
+    List<Parameter> getParameters() {
+        List<Parameter> retVal = new ArrayList<>();
+        for (List<Parameter> parameterList : parameters.values()) {
+            retVal.addAll(parameterList);
+        }
+        return retVal;
     }
 
     @Override
@@ -99,7 +100,7 @@ public class Frame {
         sb.append(command);
         sb.append(" Params:[");
         boolean first = true;
-        for (Parameter parameter : parameters.values()) {
+        for (Parameter parameter : getParameters()) {
             if(first) {
                 first = false;
             } else {
@@ -133,11 +134,16 @@ public class Frame {
 
     public void addParameter(Parameter parameter) {
         char parameterName = parameter.getParameterName();
-        if(parameters.containsKey(parameterName)) {
-            Parameter oldParameter = parameters.get(parameterName);
-            throw new IllegalStateException("Parameter with name '" + parameterName + "' already exists in the frame. Existing:" + oldParameter + ", Now try to add:" + parameter);
+        List<Parameter> list;
+        if (parameters.containsKey(parameterName)) {
+            list = parameters.get(parameterName);
         }
-        parameters.put(parameterName, parameter);
+        else {
+            list = new ArrayList<>();
+            list.add(parameter);
+            parameters.put(parameterName, list);
+        }
+        list.add(parameter);
     }
 
     public void setParameters(List<Parameter> parameters) {
@@ -147,7 +153,7 @@ public class Frame {
             } else if('c' == parameter.getParameterName()) {
                 this.command = parameter;
             } else {
-                this.parameters.put(parameter.getParameterName(), parameter);
+                this.addParameter(parameter);
             }
         }
     }
@@ -157,6 +163,10 @@ public class Frame {
     }
 
     public Parameter getParameter(char parameterName) {
+        List<Parameter> list = parameters.get(parameterName);
+        return list == null ? null : list.get(0);
+    }
+    public List<Parameter> getParameterList(char parameterName) {
         return parameters.get(parameterName);
     }
 }

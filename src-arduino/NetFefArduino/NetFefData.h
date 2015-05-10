@@ -55,6 +55,7 @@ class NetFefFrameReader {
     byte* getSubject();
     byte* getCommand();
     byte* getParameter(char parameterName);
+    byte* getParameter(char parameterName, byte* previous);
     byte* getNextParameter(byte* previous);
     boolean isSubjectAndCommand(char subject, char command);
     boolean isSubject(char subject);

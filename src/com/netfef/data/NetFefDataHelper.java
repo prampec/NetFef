@@ -151,7 +151,7 @@ public class NetFefDataHelper {
         bab.append1(frame.getParameters().size() + 2);
         buildParameterBytes(bab, frame.getSubject());
         buildParameterBytes(bab, frame.getCommand());
-        for (Parameter parameter : frame.getParameters().values()) {
+        for (Parameter parameter : frame.getParameters()) {
             buildParameterBytes(bab, parameter);
         }
 

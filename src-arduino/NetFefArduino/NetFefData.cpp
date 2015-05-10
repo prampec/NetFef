@@ -249,6 +249,30 @@ if(this->_debug != NULL) this->_debug->print(paramSpace);
   return 0;
 }
 
+byte* NetFefFrameReader::getParameter(char parameterName, byte* previous) {
+  int pos = this->_paramsPos;
+  int previousFound = false;
+if(this->_debug != NULL) this->_debug->print(this->_paramCount);
+  NetFefParameter parameter = NetFefParameter();
+  for(int i = 0; i<this->_paramCount; i++) {
+if(this->_debug != NULL) this->_debug->print((char)this->_bytes[pos]);
+    if(previous == (this->_bytes + pos)) {
+      previousFound = true;
+    } else if(previousFound && (this->_bytes[pos] == parameterName)) {
+      return this->_bytes + pos;
+    }
+    parameter.reset(this->_bytes + pos);
+    int paramSpace = parameter.calculateSpace();
+    if(paramSpace == -1) {
+      // -- Unsupported parameter type in frame, we cannot continue.
+      return 0;
+    }
+    pos += paramSpace;
+if(this->_debug != NULL) this->_debug->print(paramSpace);
+  }
+  return 0;
+}
+
 byte* NetFefFrameReader::getNextParameter(byte* previous) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
