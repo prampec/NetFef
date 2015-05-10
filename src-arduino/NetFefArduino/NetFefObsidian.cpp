@@ -160,6 +160,12 @@ if(me->_debug != NULL) me->_debug->print("*");
             me->_physicalLayer->addDataToQueue(frameBuilder);
           }
         }
+        else if(me->joinedToNetwork && parameter->isType('c') && (parameter->getCharValue() == 'r')) {
+          // -- Reset message
+          me->_lastPollTime = now;
+          me->joinedToNetwork = false;
+          me->_joinStart = 0;
+        }
       } else {
 //if(me->_debug != NULL) me->_debug->print("call");
         // -- Notify device about frame

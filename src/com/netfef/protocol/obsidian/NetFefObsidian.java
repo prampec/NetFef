@@ -90,6 +90,9 @@ public class NetFefObsidian implements NetFefNetwork {
         pollThread.start();
 
         LOG.info("Network initialized with id " + networkIdentity);
+
+        // -- Send network reset message.
+        this.sendData(new Frame(NetFefDataHelper.BROADCAST_ADDRESS, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'r'));
     }
 
     private void poll() {
