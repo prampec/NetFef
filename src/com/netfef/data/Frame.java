@@ -20,12 +20,11 @@ import java.util.*;
  * <p>User: kelemenb
  * <br/>Date: 4/8/15</p>
  */
-public class Frame {
+public class Frame extends Struct {
     byte[] targetAddress;
     byte[] senderAddress;
     Parameter subject;
     Parameter command;
-    Map<Character, List<Parameter>> parameters = new HashMap<>();
 
     Frame() {
     }
@@ -79,14 +78,6 @@ public class Frame {
         this.setCommand(new Parameter('c', ParameterType.CHAR, cmd));
     }
 
-    List<Parameter> getParameters() {
-        List<Parameter> retVal = new ArrayList<>();
-        for (List<Parameter> parameterList : parameters.values()) {
-            retVal.addAll(parameterList);
-        }
-        return retVal;
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -132,20 +123,6 @@ public class Frame {
         return sb;
     }
 
-    public void addParameter(Parameter parameter) {
-        char parameterName = parameter.getParameterName();
-        List<Parameter> list;
-        if (parameters.containsKey(parameterName)) {
-            list = parameters.get(parameterName);
-        }
-        else {
-            list = new ArrayList<>();
-            list.add(parameter);
-            parameters.put(parameterName, list);
-        }
-        list.add(parameter);
-    }
-
     public void setParameters(List<Parameter> parameters) {
         for (Parameter parameter : parameters) {
             if('s' == parameter.getParameterName()) {
@@ -158,15 +135,4 @@ public class Frame {
         }
     }
 
-    public boolean hasParameter(char paramName) {
-        return this.parameters.containsKey(paramName);
-    }
-
-    public Parameter getParameter(char parameterName) {
-        List<Parameter> list = parameters.get(parameterName);
-        return list == null ? null : list.get(0);
-    }
-    public List<Parameter> getParameterList(char parameterName) {
-        return parameters.get(parameterName);
-    }
 }

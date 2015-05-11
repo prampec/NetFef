@@ -24,6 +24,7 @@ public class Parameter {
     private Integer intValue;
     private boolean booleanValue;
     private long longValue;
+    private Struct structValue;
 
     public Parameter(char parameterName, ParameterType parameterType, char value) {
         this.parameterName = parameterName;
@@ -49,6 +50,12 @@ public class Parameter {
     }
 
     public Parameter(char parameterName, ParameterType parameterType, long value) {
+        this.parameterName = parameterName;
+        this.parameterType = parameterType;
+        this.setValue(value);
+    }
+
+    public Parameter(char parameterName, ParameterType parameterType, Struct value) {
         this.parameterName = parameterName;
         this.parameterType = parameterType;
         this.setValue(value);
@@ -115,5 +122,14 @@ public class Parameter {
 
     public char getChar() {
         return stringValue == null ? 0 : stringValue.charAt(0);
+    }
+
+    public void setValue(Struct value) {
+        this.structValue = value;
+        this.setStringValue(value.toString());
+    }
+
+    public Struct getStructValue() {
+        return this.structValue;
     }
 }

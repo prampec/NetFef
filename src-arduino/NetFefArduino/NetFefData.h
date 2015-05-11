@@ -18,24 +18,25 @@
 const byte BROADCAST_ADDRESS[2] = { 0x00, 0x00 };
 const byte MASTER_ADDRESS[2] = { 0x00, 0x01 };
 
-class NetFefFrameBuilder {
+class NetFefStructBuilder {
   public:
-    NetFefFrameBuilder(byte* buffer, unsigned int buffLen);
-    NetFefFrameBuilder();
-    void init(byte* buffer, unsigned int buffLen);
-    void reset(const byte* myAddress, const byte* targetAddress, char subject, char command);
+    NetFefStructBuilder(byte* buffer, unsigned int buffSize);
+    NetFefStructBuilder();
+    void init(byte* buffer, unsigned int buffSize);
+    void reset();
     boolean addParameter(char parameterName, char parameterType, char* value);
     boolean addParameter(char parameterName, char parameterType, unsigned int value);
     boolean addParameter(char parameterName, char parameterType, int value);
     boolean addParameter(char parameterName, char parameterType, unsigned long value);
     boolean addParameter(char parameterName, char parameterType, long value);
-    byte* getFrameBytes();
-    unsigned int getFrameLength();
+    boolean addParameter(char parameterName, NetFefStructBuilder* structBuilder);
+    byte* getBytes();
+    unsigned int getLength();
     Print* _debug = NULL;
     
-  private:
+  protected:
     byte* _bytes;
-    unsigned int _buffLen;
+    unsigned int _buffSize;
     unsigned int _pos;
     unsigned int _paramCountPos;
     boolean _addByte(byte value);
@@ -43,43 +44,62 @@ class NetFefFrameBuilder {
     boolean _addInt4(unsigned long value);
 };
 
-class NetFefFrameReader {
+class NetFefFrameBuilder : public NetFefStructBuilder {
   public:
-    NetFefFrameReader(unsigned int frameSize);
+    NetFefFrameBuilder(byte* buffer, unsigned int buffLen);
+    NetFefFrameBuilder();
+    void reset(const byte* myAddress, const byte* targetAddress, char subject, char command);
+    byte* getBytes();
+    unsigned int getLength();
+    
+  private:
+};
+
+class NetFefStructReader {
+  public:
+    NetFefStructReader(unsigned int buffSize);
+    NetFefStructReader();
+    void init(unsigned int buffSize);
+    void reset(byte* buffer, char type);
+    byte* getParameter(char parameterName);
+    byte* getParameter(char parameterName, byte* previous);
+    byte* getFirstParameter();
+    byte* getNextParameter(byte* previous);
+
+    Print* _debug = NULL;
+    static unsigned int getInt(byte* position);
+    unsigned int length;
+    
+  protected:
+    byte* _bytes;
+    unsigned int _paramCount;
+    unsigned int _paramsPos;
+    unsigned int _buffSize;
+};
+
+class NetFefFrameReader : public NetFefStructReader {
+  public:
+    NetFefFrameReader(unsigned int buffSize);
     NetFefFrameReader();
-    void init(unsigned int frameSize);
-    void reset(byte* frame);
+    void reset(byte* buffer);
     boolean isForMe(const byte* myAddress);
     boolean isValid();
     byte* getSenderAddress();
     byte* getSubject();
     byte* getCommand();
-    byte* getParameter(char parameterName);
-    byte* getParameter(char parameterName, byte* previous);
-    byte* getNextParameter(byte* previous);
     boolean isSubjectAndCommand(char subject, char command);
     boolean isSubject(char subject);
     boolean isCommand(char command);
     
     byte targetAddressLength;
     byte sourceAddressLength;
-    Print* _debug = NULL;
-    static unsigned int getInt(byte* position);
-    unsigned int frameLength;
-    
-  private:
-    byte* _bytes;
-    unsigned int _frameSize;
-    unsigned int _paramCount;
-    unsigned int _paramsPos;
-    unsigned int _frameMaxSize;
 };
 
 class NetFefParameter {
   public:
     NetFefParameter();
     void reset(byte* parameterPointer);
-    int calculateSpace();
+    int calculateSpace(); // -- It might be a good idea to use unsigned int here, however it is not likely to handle huge values.
     char getName();
     char getType();
     boolean isType(char parameterType);
@@ -90,6 +110,7 @@ class NetFefParameter {
     long getLongValue(); // -- We do not have getULongValue method, since long is always 32bits, so you can just cast to unsigned long.
     char getCharValue();
     char* getStringValue();
+    NetFefStructReader* getStructValue(NetFefStructReader* structReader);
     Print* _debug = NULL;
     
   private:

@@ -75,16 +75,17 @@ public class NetFefDataHelper {
         }
         frame.setSenderAddress(senderAddress);
 
-        int parameterCount = bar.readInt1();
-        List<Parameter> parameters = readFrameParameters(bar, parameterCount);
+        List<Parameter> parameters = readStructParameters(bar);
 
         frame.setParameters(parameters);
 
         return frame;
     }
 
-    private static List<Parameter> readFrameParameters(ByteArrayReader bar, int parameterCount) {
-        List<Parameter> parameters = new ArrayList<>();
+    private static List<Parameter> readStructParameters(ByteArrayReader bar) {
+        int parameterCount = bar.readInt1();
+
+        List<Parameter> parameters = new ArrayList<>(parameterCount);
 
         LOG.trace("Trying to read " + parameterCount + " parameter(s).");
 
@@ -132,6 +133,16 @@ public class NetFefDataHelper {
             int length = bar.readInt2();
             String value = bar.readString(length);
             parameter.setValue(value);
+        } else if(parameterType == ParameterType.STRUCT1) {
+            int length = bar.readInt1();
+            List<Parameter> parameters = readStructParameters(bar);
+            Struct value = new Struct(parameters);
+            parameter.setValue(value);
+        } else if(parameterType == ParameterType.STRUCT2) {
+            int length = bar.readInt2();
+            List<Parameter> parameters = readStructParameters(bar);
+            Struct value = new Struct(parameters);
+            parameter.setValue(value);
         }
 
         return parameter;
@@ -171,6 +182,7 @@ public class NetFefDataHelper {
 
     private static ByteArrayBuilder buildParameterBytes(ByteArrayBuilder bab, Parameter parameter) {
         bab.append(parameter.getParameterName());
+        // -- TODO: Should automatically switch between s/S and t/T types according to the size.
         ParameterType parameterType = parameter.getParameterType();
         bab.append(parameterType.getVisual());
         if(parameterType == ParameterType.BOOLEAN) {
@@ -197,10 +209,29 @@ public class NetFefDataHelper {
             bab.append2(stringValue.length() + 1);
             bab.append(stringValue.getBytes());
             bab.append('\0');
+        } else if(parameterType == ParameterType.STRUCT1) {
+            Struct structValue = parameter.getStructValue();
+            ByteArrayBuilder structBytes = getStructBytes(structValue);
+            bab.append1(structBytes.getSize());
+            bab.append(structBytes.getBytes());
+        } else if(parameterType == ParameterType.STRUCT2) {
+            Struct structValue = parameter.getStructValue();
+            ByteArrayBuilder structBytes = getStructBytes(structValue);
+            bab.append2(structBytes.getSize());
+            bab.append(structBytes.getBytes());
         } else {
             throw new UnsupportedOperationException("Parameter type " + parameterType + " is not implemented.");
         }
 
+        return bab;
+    }
+
+    private static ByteArrayBuilder getStructBytes(Struct struct) {
+        ByteArrayBuilder bab = new ByteArrayBuilder();
+        bab.append1(struct.getParameters().size()); // -- Param count
+        for (Parameter parameter : struct.getParameters()) {
+            buildParameterBytes(bab, parameter);
+        }
         return bab;
     }
 

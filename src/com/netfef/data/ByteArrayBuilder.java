@@ -152,4 +152,8 @@ public class ByteArrayBuilder {
         value = new byte[10];
         count = 0;
     }
+
+    public ByteArrayBuilder append(ByteArrayBuilder bab) {
+        return this.append(bab.getBytes());
+    }
 }

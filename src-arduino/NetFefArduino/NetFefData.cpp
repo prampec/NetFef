@@ -13,18 +13,29 @@
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffLen) {
-  this->init(buffer, buffLen);
+NetFefStructBuilder::NetFefStructBuilder(byte* buffer, unsigned int buffSize) {
+  this->init(buffer, buffSize);
+}
+NetFefFrameBuilder::NetFefFrameBuilder(byte* buffer, unsigned int buffSize) : NetFefStructBuilder(buffer, buffSize) {
 }
 
-NetFefFrameBuilder::NetFefFrameBuilder() {
+NetFefStructBuilder::NetFefStructBuilder() {
+}
+NetFefFrameBuilder::NetFefFrameBuilder() : NetFefStructBuilder() {
 }
 
-void NetFefFrameBuilder::init(byte* buffer, unsigned int buffLen) {
+void NetFefStructBuilder::init(byte* buffer, unsigned int buffSize) {
   this->_bytes = buffer;
-  this->_buffLen = buffLen;
+  this->_buffSize = buffSize;
 }
 
+void NetFefStructBuilder::reset() {
+  this->_pos = 2; // -- Leave the first two bytes for the length.
+
+  this->_paramCountPos = this->_pos;
+  this->_bytes[this->_paramCountPos] = 0;
+  this->_pos += 1;
+}
 void NetFefFrameBuilder::reset(const byte* myAddress, const byte* targetAddress, char subject, char command) {
   this->_pos = 2; // -- Leave the first two bytes for the frame length.
 
@@ -44,16 +55,26 @@ void NetFefFrameBuilder::reset(const byte* myAddress, const byte* targetAddress,
   this->addParameter('c', 'c', &command);
 }
 
-byte* NetFefFrameBuilder::getFrameBytes() {
+byte* NetFefStructBuilder::getBytes() {
+  
+  // -- Write size to the topmost position
+  int size = this->_pos;
+  this->_pos = 0;
+  this->_addInt2(size-2);
+  this->_pos = size; // -- Reset cursor position to the end.
+  
+  return this->_bytes;
+}
+byte* NetFefFrameBuilder::getBytes() {
   
   // -- Write frame size to the topmost position
-  int frameSize = this->_pos;
+  int size = this->_pos;
   this->_pos = 0;
-  this->_addInt2(frameSize+1);
-  this->_pos = frameSize; // -- Reset cursor position to the end.
+  this->_addInt2(size+1);
+  this->_pos = size; // -- Reset cursor position to the end.
   
   // -- Calculate sum
-  if((this->_pos+1) < this->_buffLen) {
+  if((this->_pos+1) < this->_buffSize) {
     byte sum = 0;
     for(int i = 0; i<this->_pos; i++) {
       sum += this->_bytes[i];
@@ -64,11 +85,14 @@ byte* NetFefFrameBuilder::getFrameBytes() {
   return this->_bytes;
 }
 
-unsigned int NetFefFrameBuilder::getFrameLength() {
+unsigned int NetFefStructBuilder::getLength() {
+  return this->_pos;
+}
+unsigned int NetFefFrameBuilder::getLength() {
   return this->_pos+1;
 }
 
-boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, char* value) {
+boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, char* value) {
   boolean success = this->_addByte(parameterName) && this->_addByte(parameterType);
   if(!success) {
     return false;
@@ -83,7 +107,7 @@ boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType,
   else if(parameterType == 's') {
     int len = strlen(value) + 1;
     success = this->_addByte(len);
-    if(success && (this->_pos+len) < this->_buffLen) {
+    if(success && (this->_pos+len) < this->_buffSize) {
       strcpy((char*)this->_bytes+this->_pos, value);
       this->_pos += len;
     } else {
@@ -93,7 +117,7 @@ boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType,
   else if(parameterType == 'S') {
     int len = strlen(value) + 1;
     success = this->_addInt2(len);
-    if(success && (this->_pos+len) < this->_buffLen) {
+    if(success && (this->_pos+len) < this->_buffSize) {
       strcpy((char*)this->_bytes+this->_pos, value);
       this->_pos += len;
     } else {
@@ -107,7 +131,7 @@ boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType,
   return success;
 }
 
-boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
+boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
   boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
   if(!success) {
     return false;
@@ -124,11 +148,11 @@ boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType,
   return success;
 }
 
-boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, int value) {
+boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, int value) {
   return this->addParameter(parameterName, 'I', (unsigned int)value);
 }
 
-boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
+boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
   boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
   if(!success) {
     return false;
@@ -142,20 +166,41 @@ boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType,
   return success;
 }
 
-boolean NetFefFrameBuilder::addParameter(char parameterName, char parameterType, long value) {
+boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, long value) {
   return this->addParameter(parameterName, 'L', (unsigned long)value);
 }
 
-boolean NetFefFrameBuilder::_addByte(byte value) {
-  if((this->_pos+1) >= this->_buffLen) {
+boolean NetFefStructBuilder::addParameter(char parameterName, NetFefStructBuilder* structBuilder) {
+  boolean success = this->_addByte(parameterName) &&  this->_addByte('T');
+  if(!success) {
+    return false;
+  }
+
+  byte* bytes = structBuilder->getBytes();
+  unsigned int toGo = structBuilder->getLength();
+  int i = 0;
+  while(success && (i < toGo)) {
+    success = this->_addByte(*(bytes+i));
+    i += 1;
+  }
+
+  if(success) {
+    this->_bytes[this->_paramCountPos] += 1;
+  }
+
+  return success;
+}
+
+boolean NetFefStructBuilder::_addByte(byte value) {
+  if((this->_pos+1) >= this->_buffSize) {
     return false;
   }
   this->_bytes[this->_pos++] = value;
   return true;
 }
 
-boolean NetFefFrameBuilder::_addInt2(unsigned int value) {
-  if((this->_pos+2) >= this->_buffLen) {
+boolean NetFefStructBuilder::_addInt2(unsigned int value) {
+  if((this->_pos+2) >= this->_buffSize) {
     return false;
   }
   this->_bytes[this->_pos++] = value >> 8;
@@ -163,8 +208,8 @@ boolean NetFefFrameBuilder::_addInt2(unsigned int value) {
   return true;
 }
 
-boolean NetFefFrameBuilder::_addInt4(unsigned long value) {
-  if((this->_pos+4) >= this->_buffLen) {
+boolean NetFefStructBuilder::_addInt4(unsigned long value) {
+  if((this->_pos+4) >= this->_buffSize) {
     return false;
   }
   this->_bytes[this->_pos++] = value >> 24;
@@ -180,27 +225,42 @@ boolean NetFefFrameBuilder::_addInt4(unsigned long value) {
 
 // ============================= ////////////////////////////////// ==================================
 
-NetFefFrameReader::NetFefFrameReader(unsigned int frameMaxSize) {
-  this->init(frameMaxSize);
+NetFefStructReader::NetFefStructReader(unsigned int buffSize) {
+  this->init(buffSize);
 }
-NetFefFrameReader::NetFefFrameReader() {
+NetFefFrameReader::NetFefFrameReader(unsigned int buffSize) : NetFefStructReader(buffSize) {
 }
-void NetFefFrameReader::init(unsigned int frameMaxSize) {
-  this->_frameMaxSize = frameMaxSize;
+NetFefStructReader::NetFefStructReader() {
+}
+NetFefFrameReader::NetFefFrameReader() : NetFefStructReader() {
+}
+void NetFefStructReader::init(unsigned int buffSize) {
+  this->_buffSize = buffSize;
 }
 
-void NetFefFrameReader::reset(byte* frame) {
-  this->_bytes = frame;
+void NetFefStructReader::reset(byte* buffer, char type) {
+  this->_bytes = buffer;
   
 if(this->_debug != NULL) this->_debug->print("%");
-  this->frameLength = this->getInt(this->_bytes);
-if(this->_debug != NULL) this->_debug->print(this->frameLength);
+  if(type == 't') {
+    this->length = *(this->_bytes);
+    this->_paramCount = this->_bytes[1];
+    this->_paramsPos = 2;
+  } else { // -- type == 'T'
+    this->length = this->getInt(this->_bytes);
+    this->_paramCount = this->_bytes[2];
+    this->_paramsPos = 3;
+  }
+}
+void NetFefFrameReader::reset(byte* buffer) {
+  NetFefStructReader::reset(buffer, 'T');
+if(this->_debug != NULL) this->_debug->print(this->length);
   this->targetAddressLength = this->_bytes[2];
   this->sourceAddressLength = this->_bytes[3 + this->targetAddressLength];
   this->_paramCount = this->_bytes[4 + this->targetAddressLength + this->sourceAddressLength];
   this->_paramsPos = 5 + this->targetAddressLength + this->sourceAddressLength;
 if(this->_debug != NULL) this->_debug->print(this->_paramsPos);
-if(this->_debug != NULL) this->_debug->print((char)frame[this->_paramsPos]);
+if(this->_debug != NULL) this->_debug->print((char)buffer[this->_paramsPos]);
 }
 
 boolean NetFefFrameReader::isForMe(const byte* myAddress) {
@@ -212,22 +272,22 @@ boolean NetFefFrameReader::isForMe(const byte* myAddress) {
 }
 
 boolean NetFefFrameReader::isValid() {
-  if(!this->_frameMaxSize > this->frameLength) {
+  if(!this->_buffSize > this->length) {
     return false; // -- Cannot handle bigger frames than allocated buffers.
   }
   // -- Check sum
   byte sum = 0;
-  for(int i=0; i<this->frameLength-1; i++) {
+  for(int i=0; i<this->length-1; i++) {
     sum += this->_bytes[i];
   }
-  return sum == this->_bytes[this->frameLength-1];
+  return sum == this->_bytes[this->length-1];
 }
 
 byte* NetFefFrameReader::getSenderAddress() {
   return (this->_bytes + (4 + this->targetAddressLength));
 }
 
-byte* NetFefFrameReader::getParameter(char parameterName) {
+byte* NetFefStructReader::getParameter(char parameterName) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
   NetFefParameter parameter = NetFefParameter();
@@ -249,7 +309,7 @@ if(this->_debug != NULL) this->_debug->print(paramSpace);
   return 0;
 }
 
-byte* NetFefFrameReader::getParameter(char parameterName, byte* previous) {
+byte* NetFefStructReader::getParameter(char parameterName, byte* previous) {
   int pos = this->_paramsPos;
   int previousFound = false;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
@@ -273,7 +333,11 @@ if(this->_debug != NULL) this->_debug->print(paramSpace);
   return 0;
 }
 
-byte* NetFefFrameReader::getNextParameter(byte* previous) {
+byte* NetFefStructReader::getFirstParameter() {
+  int pos = this->_paramsPos;
+  return this->_bytes + pos;
+}
+byte* NetFefStructReader::getNextParameter(byte* previous) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
   NetFefParameter parameter = NetFefParameter();
@@ -301,7 +365,7 @@ byte* NetFefFrameReader::getSubject() {
   return getParameter('s');
 }
 
-unsigned int NetFefFrameReader::getInt(byte* position) {
+unsigned int NetFefStructReader::getInt(byte* position) {
   return (unsigned int)position[0] << 8 | (unsigned int)position[1];
 }
 
@@ -348,7 +412,13 @@ int NetFefParameter::calculateSpace() {
     return 3 + this->_pp[2];
   }
   else if(this->isType('S')) {
-    return 4 + NetFefFrameReader::getInt(this->_pp+2);
+    return 4 + NetFefStructReader::getInt(this->_pp+2);
+  }
+  else if(this->isType('t')) {
+    return 3 + this->_pp[2];
+  }
+  else if(this->isType('T')) {
+    return 4 + NetFefStructReader::getInt(this->_pp+2);
   }
 
   return -1; // -- Unsupported type
@@ -385,7 +455,7 @@ int NetFefParameter::getSignedIntValue() {
 unsigned int NetFefParameter::getIntValue() {
   if(this->isType('i')) {
 if(this->_debug != NULL) { this->_debug->print(this->_pp[2],HEX); this->_debug->print("-"); this->_debug->print(this->_pp[3],HEX); }
-    return NetFefFrameReader::getInt(this->_pp+2);
+    return NetFefStructReader::getInt(this->_pp+2);
   }
   return 0; // -- Unsupported type
 }
@@ -409,6 +479,21 @@ char* NetFefParameter::getStringValue() {
     return (char*)this->_pp + 4;
   }
   return 0; // -- Unsupported type
+}
+NetFefStructReader* NetFefParameter::getStructValue(NetFefStructReader* structReader) {
+  byte* valueStart;
+  /*
+  if(this->isType('t')) {
+    valueStart = this->_pp + 2;
+  }
+  else if(this->isType('T')) {
+    valueStart = this->_pp + 2;
+  } else {
+    return 0; // -- Unsupported type
+  }
+  */
+  structReader->reset(this->_pp + 2, this->getType());
+  return structReader;
 }
 
 

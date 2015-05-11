@@ -109,7 +109,7 @@ void NetFefRs485::copyDataValues(byte* from, byte* to) {
 }
 
 void NetFefRs485::addDataToQueue(NetFefFrameBuilder* frameBuilder) {
-    this->_addDataToQueue(frameBuilder->getFrameBytes(), frameBuilder->getFrameLength());
+    this->_addDataToQueue(frameBuilder->getBytes(), frameBuilder->getLength());
 }
 void NetFefRs485::_addDataToQueue(byte* data, int length) {
   if(this->_queueSize >= COMM_QUEUE_LENGTH) {

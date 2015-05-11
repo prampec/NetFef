@@ -37,6 +37,10 @@ public enum ParameterType {
     STRING1('s'),
     /** String with followed by 2 bytes of length. */
     STRING2('S'),
+    /** Struct with followed by 1 byte of length. */
+    STRUCT1('t'),
+    /** Struct with followed by 2 bytes of length. */
+    STRUCT2('T'),
     ;
 
     private char visual;
