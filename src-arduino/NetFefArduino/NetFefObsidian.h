@@ -30,7 +30,7 @@ class NetFefObsidian : public Task, public INetFefNetwork
       char* deviceId, unsigned int pollMeInterval, unsigned long randomSeedValue);
     virtual void begin();
     virtual boolean sendFrame(NetFefFrameBuilder* frameBuilder);
-    NetFefFrameBuilder* prepareReply(NetFefFrameReader* frameReader, char subject, char command);
+    NetFefFrameBuilder* prepareReply(NetFefFrameReader* frameReader);
     boolean joinedToNetwork;
     Print* _debug = NULL;
     virtual char* getVersion() { return "0"; };

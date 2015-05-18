@@ -46,13 +46,7 @@ public class NetFefDataHelper {
         }
 
         // -- Check sum
-        int sum = 0;
-        for (int i = 0; i < (bytes.length-1); i++) {
-            sum += Byte.toUnsignedInt(bytes[i]);
-        }
-        if((byte)sum != bytes[len-1]) {
-            // -- Check sum mismatch
-            LOG.warn("Check sum error. Dropping frame.");
+        if (checkSum(bytes, bytes[len - 1])) {
             return null;
         }
 
@@ -80,6 +74,21 @@ public class NetFefDataHelper {
         frame.setParameters(parameters);
 
         return frame;
+    }
+
+    private static boolean checkSum(byte[] bytes, byte aByte) {
+        int sum = 0;
+        for (int i = 0; i < (bytes.length-1); i++) {
+            sum += Byte.toUnsignedInt(bytes[i]);
+        }
+        byte calculated = (byte)sum;
+        byte provided = aByte;
+        if(calculated != provided) {
+            // -- Check sum mismatch
+            LOG.warn("Check sum error. Expected: " + FormatHelper.toHexString3(calculated) + " Provided: " + FormatHelper.toHexString3(provided) + " Dropping frame.");
+            return true;
+        }
+        return false;
     }
 
     private static List<Parameter> readStructParameters(ByteArrayReader bar) {

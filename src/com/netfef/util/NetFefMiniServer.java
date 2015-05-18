@@ -87,7 +87,7 @@ public class NetFefMiniServer {
     }
 
     private String formatDate() {
-        return new SimpleDateFormat("yyMMddhhmmss").format(new Date());
+        return new SimpleDateFormat("yyMMddhhmmssF").format(new Date());
     }
 
 

@@ -51,7 +51,14 @@ void NetFefFrameBuilder::reset(const byte* myAddress, const byte* targetAddress,
   this->_bytes[this->_paramCountPos] = 0;
   this->_pos += 1;
   
+  this->setSubject(subject);
+  this->setCommand(command);
+}
+
+void NetFefFrameBuilder::setSubject(char subject) {
   this->addParameter('s', 'c', &subject);
+}
+void NetFefFrameBuilder::setCommand(char command) {
   this->addParameter('c', 'c', &command);
 }
 
@@ -74,7 +81,7 @@ byte* NetFefFrameBuilder::getBytes() {
   this->_pos = size; // -- Reset cursor position to the end.
   
   // -- Calculate sum
-  if((this->_pos+1) < this->_buffSize) {
+  if(this->hasSpace()) {
     byte sum = 0;
     for(int i = 0; i<this->_pos; i++) {
       sum += this->_bytes[i];
@@ -92,77 +99,98 @@ unsigned int NetFefFrameBuilder::getLength() {
   return this->_pos+1;
 }
 
+boolean NetFefStructBuilder::hasSpace() {
+  return this->_pos < this->_buffSize;
+}
+boolean NetFefFrameBuilder::hasSpace() {
+  return (this->_pos+1) < this->_buffSize;
+}
+
 boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, char* value) {
+  unsigned int posSave = this->_pos;
   boolean success = this->_addByte(parameterName) && this->_addByte(parameterType);
-  if(!success) {
-    return false;
-  }
-  else if(
-    (parameterType == 'c')
-    || (parameterType == 'B')
-    || (parameterType == 'b')
-    ) {
-    success = this->_addByte(*value);
-  }
-  else if(parameterType == 's') {
-    int len = strlen(value) + 1;
-    success = this->_addByte(len);
-    if(success && (this->_pos+len) < this->_buffSize) {
-      strcpy((char*)this->_bytes+this->_pos, value);
-      this->_pos += len;
-    } else {
-      success = false;
+  if(success) {
+    if(
+      (parameterType == 'c')
+      || (parameterType == 'B')
+      || (parameterType == 'b')
+      ) {
+      success = this->_addByte(*value);
     }
-  }
-  else if(parameterType == 'S') {
-    int len = strlen(value) + 1;
-    success = this->_addInt2(len);
-    if(success && (this->_pos+len) < this->_buffSize) {
-      strcpy((char*)this->_bytes+this->_pos, value);
-      this->_pos += len;
-    } else {
-      success = false;
+    else if(parameterType == 's') {
+      int len = strlen(value) + 1;
+      success = this->_addByte(len);
+      if(success && (this->_pos+len) < this->_buffSize) {
+        strcpy((char*)this->_bytes+this->_pos, value);
+        this->_pos += len;
+      } else {
+        success = false;
+      }
+    }
+    else if(parameterType == 'S') {
+      int len = strlen(value) + 1;
+      success = this->_addInt2(len);
+      if(success && (this->_pos+len) < this->_buffSize) {
+        strcpy((char*)this->_bytes+this->_pos, value);
+        this->_pos += len;
+      } else {
+        success = false;
+      }
     }
   }
 
+  success = success && this->hasSpace();
   if(success) {
     this->_bytes[this->_paramCountPos] += 1;
+  } else {
+    this->_pos = posSave;
   }
+
   return success;
 }
 
 boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, unsigned int value) {
+  unsigned int posSave = this->_pos;
   boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
-  if(!success) {
-    return false;
+  if(success) {
+    if((parameterType == 'b') || (parameterType == 'B')) {
+      success = this->_addByte(value);
+    }
+    else if((parameterType == 'i') || (parameterType == 'I')) {
+      success = this->_addInt2(value);
+    }
   }
-  else if(parameterType == 'b') {
-    success = this->_addByte(value);
-  }
-  else if((parameterType == 'i') || (parameterType == 'I')) {
-    success = this->_addInt2(value);
-  }
+
+  success = success && this->hasSpace();
   if(success) {
     this->_bytes[this->_paramCountPos] += 1;
+  } else {
+    this->_pos = posSave;
   }
+
   return success;
 }
 
 boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, int value) {
-  return this->addParameter(parameterName, 'I', (unsigned int)value);
+  return this->addParameter(parameterName, parameterType, (unsigned int)value);
 }
 
 boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType, unsigned long value) {
+  unsigned int posSave = this->_pos;
   boolean success = this->_addByte(parameterName) &&  this->_addByte(parameterType);
-  if(!success) {
-    return false;
+  if(success) {
+    if((parameterType == 'l') || (parameterType == 'L')) {
+      success = this->_addInt4(value);
+    }
   }
-  else if((parameterType == 'l') || (parameterType == 'L')) {
-    success = this->_addInt4(value);
-  }
+
+  success = success && this->hasSpace();
   if(success) {
     this->_bytes[this->_paramCountPos] += 1;
+  } else {
+    this->_pos = posSave;
   }
+
   return success;
 }
 
@@ -171,21 +199,23 @@ boolean NetFefStructBuilder::addParameter(char parameterName, char parameterType
 }
 
 boolean NetFefStructBuilder::addParameter(char parameterName, NetFefStructBuilder* structBuilder) {
+  unsigned int posSave = this->_pos;
   boolean success = this->_addByte(parameterName) &&  this->_addByte('T');
-  if(!success) {
-    return false;
+  if(success) {
+    byte* bytes = structBuilder->getBytes();
+    unsigned int toGo = structBuilder->getLength();
+    int i = 0;
+    while(success && (i < toGo)) {
+      success = this->_addByte(*(bytes+i));
+      i += 1;
+    }
   }
 
-  byte* bytes = structBuilder->getBytes();
-  unsigned int toGo = structBuilder->getLength();
-  int i = 0;
-  while(success && (i < toGo)) {
-    success = this->_addByte(*(bytes+i));
-    i += 1;
-  }
-
+  success = success && this->hasSpace();
   if(success) {
     this->_bytes[this->_paramCountPos] += 1;
+  } else {
+    this->_pos = posSave;
   }
 
   return success;
@@ -290,14 +320,13 @@ byte* NetFefFrameReader::getSenderAddress() {
 byte* NetFefStructReader::getParameter(char parameterName) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
-  NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount; i++) {
 if(this->_debug != NULL) this->_debug->print((char)this->_bytes[pos]);
     if(this->_bytes[pos] == parameterName) {
       return this->_bytes + pos;
     } else {
-      parameter.reset(this->_bytes + pos);
-      int paramSpace = parameter.calculateSpace();
+      this->_parameter.reset(this->_bytes + pos);
+      int paramSpace = this->_parameter.calculateSpace();
       if(paramSpace == -1) {
         // -- Unsupported parameter type in frame, we cannot continue.
         return 0;
@@ -313,7 +342,6 @@ byte* NetFefStructReader::getParameter(char parameterName, byte* previous) {
   int pos = this->_paramsPos;
   int previousFound = false;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
-  NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount; i++) {
 if(this->_debug != NULL) this->_debug->print((char)this->_bytes[pos]);
     if(previous == (this->_bytes + pos)) {
@@ -321,8 +349,8 @@ if(this->_debug != NULL) this->_debug->print((char)this->_bytes[pos]);
     } else if(previousFound && (this->_bytes[pos] == parameterName)) {
       return this->_bytes + pos;
     }
-    parameter.reset(this->_bytes + pos);
-    int paramSpace = parameter.calculateSpace();
+    this->_parameter.reset(this->_bytes + pos);
+    int paramSpace = this->_parameter.calculateSpace();
     if(paramSpace == -1) {
       // -- Unsupported parameter type in frame, we cannot continue.
       return 0;
@@ -340,10 +368,9 @@ byte* NetFefStructReader::getFirstParameter() {
 byte* NetFefStructReader::getNextParameter(byte* previous) {
   int pos = this->_paramsPos;
 if(this->_debug != NULL) this->_debug->print(this->_paramCount);
-  NetFefParameter parameter = NetFefParameter();
   for(int i = 0; i<this->_paramCount-1; i++) {
-    parameter.reset(this->_bytes + pos);
-    int paramSpace = parameter.calculateSpace();
+    this->_parameter.reset(this->_bytes + pos);
+    int paramSpace = this->_parameter.calculateSpace();
 if(this->_debug != NULL) { this->_debug->print('-'); this->_debug->print(paramSpace); }
     if(paramSpace == -1) {
       // -- Unsupported parameter type in frame, we cannot continue.
@@ -373,14 +400,12 @@ boolean NetFefFrameReader::isSubjectAndCommand(char subject, char command) {
   return this->isSubject(subject) && this->isCommand(command);
 }
 boolean NetFefFrameReader::isSubject(char subject) {
-  NetFefParameter parameter = NetFefParameter();
-  parameter.reset(this->getSubject());
-  return parameter.isType('c') && (parameter.getCharValue() == subject);
+  this->_parameter.reset(this->getSubject());
+  return this->_parameter.isType('c') && (this->_parameter.getCharValue() == subject);
 }
 boolean NetFefFrameReader::isCommand(char command) {
-  NetFefParameter parameter = NetFefParameter();
-  parameter.reset(this->getCommand());
-  return parameter.isType('c') && (parameter.getCharValue() == command);
+  this->_parameter.reset(this->getCommand());
+  return this->_parameter.isType('c') && (this->_parameter.getCharValue() == command);
 }
 
 

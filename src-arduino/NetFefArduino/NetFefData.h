@@ -33,6 +33,7 @@ class NetFefStructBuilder {
     byte* getBytes();
     unsigned int getLength();
     Print* _debug = NULL;
+    boolean hasSpace();
     
   protected:
     byte* _bytes;
@@ -51,8 +52,35 @@ class NetFefFrameBuilder : public NetFefStructBuilder {
     void reset(const byte* myAddress, const byte* targetAddress, char subject, char command);
     byte* getBytes();
     unsigned int getLength();
-    
+    boolean hasSpace();
+    void setSubject(char subject);
+    void setCommand(char command);
+
   private:
+};
+
+class NetFefStructReader;
+
+class NetFefParameter {
+  public:
+    NetFefParameter();
+    void reset(byte* parameterPointer);
+    int calculateSpace(); // -- It might be a good idea to use unsigned int here, however it is not likely to handle huge values.
+    char getName();
+    char getType();
+    boolean isType(char parameterType);
+    boolean getBooleanValue();
+    byte getByteValue();
+    int getSignedIntValue();
+    unsigned int getIntValue();
+    long getLongValue(); // -- We do not have getULongValue method, since long is always 32bits, so you can just cast to unsigned long.
+    char getCharValue();
+    char* getStringValue();
+    NetFefStructReader* getStructValue(NetFefStructReader* structReader);
+    Print* _debug = NULL;
+
+  private:
+    byte* _pp;
 };
 
 class NetFefStructReader {
@@ -75,6 +103,7 @@ class NetFefStructReader {
     unsigned int _paramCount;
     unsigned int _paramsPos;
     unsigned int _buffSize;
+    NetFefParameter _parameter = NetFefParameter();
 };
 
 class NetFefFrameReader : public NetFefStructReader {
@@ -93,28 +122,6 @@ class NetFefFrameReader : public NetFefStructReader {
     
     byte targetAddressLength;
     byte sourceAddressLength;
-};
-
-class NetFefParameter {
-  public:
-    NetFefParameter();
-    void reset(byte* parameterPointer);
-    int calculateSpace(); // -- It might be a good idea to use unsigned int here, however it is not likely to handle huge values.
-    char getName();
-    char getType();
-    boolean isType(char parameterType);
-    boolean getBooleanValue();
-    byte getByteValue();
-    int getSignedIntValue();
-    unsigned int getIntValue();
-    long getLongValue(); // -- We do not have getULongValue method, since long is always 32bits, so you can just cast to unsigned long.
-    char getCharValue();
-    char* getStringValue();
-    NetFefStructReader* getStructValue(NetFefStructReader* structReader);
-    Print* _debug = NULL;
-    
-  private:
-    byte* _pp;
 };
 
 #endif // -- NetFefData_H

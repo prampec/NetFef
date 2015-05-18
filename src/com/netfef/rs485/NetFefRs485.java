@@ -42,8 +42,8 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
     private static final Logger LOG = LoggerFactory.getLogger(NetFefRs485.class);
 
     public static final Pin WRITE_ENABLED_PIN = RaspiPin.GPIO_01;
-    public static final int MINIMAL_FRAME_SPACING_MS = 100;
-    public static final int COLLISION_PENALTY_MAX_MS = 300;
+    public static final int MINIMAL_FRAME_SPACING_MS = 200;
+    public static final int COLLISION_PENALTY_MAX_MS = 400;
     private static final int MAX_LEN = 1024;
     private static final int RECEIVE_MS = 120;
     private GpioPinDigitalOutput writeEnablePin;

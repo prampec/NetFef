@@ -129,7 +129,7 @@ return;
             if(parameter->getCharValue() == 'a') {
               me->joinedToNetwork = true;
               me->_lastPollTime = now;
-              NetFefFrameBuilder* frameBuilder = me->prepareReply(frameReader, 'n', 'J');
+              NetFefFrameBuilder* frameBuilder = me->prepareReply(frameReader);
               frameBuilder->addParameter('d', 's', me->_deviceId);
               frameBuilder->addParameter('v', 's', me->_versionString);
               frameBuilder->addParameter('n', 'i', me->_pollMeInterval);
@@ -154,7 +154,7 @@ if(me->_debug != NULL) me->_debug->print(me->_registrationInfo->registrationId);
           // -- Notify device about poll frame
           me->_lastPollTime = now;
 if(me->_debug != NULL) me->_debug->print("*");
-          NetFefFrameBuilder* frameBuilder = me->_frameReceivedListener(frameReader, me->prepareReply(frameReader, 'n', 'p'));
+          NetFefFrameBuilder* frameBuilder = me->_frameReceivedListener(frameReader, me->prepareReply(frameReader));
           frameBuilder->addParameter('n', 'i', me->_pollMeInterval);
           if(me->_physicalLayer->canSend()) {
             me->_physicalLayer->addDataToQueue(frameBuilder);
@@ -169,7 +169,7 @@ if(me->_debug != NULL) me->_debug->print("*");
       } else {
 //if(me->_debug != NULL) me->_debug->print("call");
         // -- Notify device about frame
-        NetFefFrameBuilder* frameBuilder = me->_frameReceivedListener(frameReader, me->prepareReply(frameReader, 'n', 'p'));
+        NetFefFrameBuilder* frameBuilder = me->_frameReceivedListener(frameReader, me->prepareReply(frameReader));
         if(frameBuilder != 0) {
           if(me->_physicalLayer->canSend()) {
             me->_physicalLayer->addDataToQueue(frameBuilder);
@@ -199,9 +199,16 @@ RegistrationInfo* NetFefObsidian::_generateAddress() {
   return this->_registrationInfo;
 }
 
-NetFefFrameBuilder* NetFefObsidian::prepareReply(NetFefFrameReader* frameReader, char subject, char command) {
+NetFefFrameBuilder* NetFefObsidian::prepareReply(NetFefFrameReader* frameReader) {
+  byte* resetParameterPointer = frameReader->getSubject();
+  this->_parameter.reset(resetParameterPointer);
+  char subject = this->_parameter.isType('c') ? this->_parameter.getCharValue() : 'n';
+  resetParameterPointer = frameReader->getCommand();
+  this->_parameter.reset(resetParameterPointer);
+  char command = this->_parameter.isType('c') ? this->_parameter.getCharValue() : 'p';
+
   this->_frameBuilder.reset(this->_registrationInfo->myAddress, MASTER_ADDRESS, subject, command);
-  byte* resetParameterPointer = frameReader->getParameter('r');
+  resetParameterPointer = frameReader->getParameter('r');
   if(resetParameterPointer != 0) {
     this->_parameter.reset(resetParameterPointer);
     this->_frameBuilder.addParameter('R', 'i', this->_parameter.getIntValue());

@@ -74,6 +74,12 @@ public class FormatHelper {
         return s;
 
     }
+    public static String toHexString3(byte aByte) {
+        String str = Integer.toHexString(byteToInt(aByte));
+        String s = str.length() == 1 ? "0x0" + str : "0x" + str;
+        return s;
+
+    }
     public static int byteToInt(byte aByte) {
         return aByte & 0xFF;
     }
