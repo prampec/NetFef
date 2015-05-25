@@ -80,6 +80,11 @@ public class NetFefObsidian implements NetFefNetwork {
             }
         });
 
+        // -- Send network reset message.
+        LOG.info("Network initialized with id " + networkIdentity);
+
+        this.sendData(new Frame(NetFefDataHelper.BROADCAST_ADDRESS, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'r'));
+
         sendThread = new Thread(this::sending);
         sendThread.start();
 
@@ -89,10 +94,6 @@ public class NetFefObsidian implements NetFefNetwork {
         pollThread = new Thread(this::poll);
         pollThread.start();
 
-        LOG.info("Network initialized with id " + networkIdentity);
-
-        // -- Send network reset message.
-        this.sendData(new Frame(NetFefDataHelper.BROADCAST_ADDRESS, NETWORK_MANAGEMENT_MESSAGE_SUBJECT, 'r'));
     }
 
     private void poll() {

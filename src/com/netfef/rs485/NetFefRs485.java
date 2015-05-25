@@ -19,7 +19,6 @@ import com.netfef.protocol.NetFefNetworkConfig;
 import com.netfef.protocol.NetFefPhysicalLayer;
 import com.netfef.protocol.NetFefReceiveListener;
 import com.netfef.protocol.obsidian.NetFefObsidian;
-import com.netfef.protocol.obsidian.NetFefObsidianConfig;
 import com.netfef.util.FormatHelper;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.serial.Serial;
@@ -28,8 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -187,18 +188,32 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
         }
         writeEnablePin.high();
         try {
+            if(LOG.isTraceEnabled()) {
+                String s = FormatHelper.byteArrayToString(bytesToSend);
+                LOG.trace("Sending: " + s);
+            }
             serial.write(bytesToSend);
             if(!waitForEcho()) {
                 return false;
             }
-            byte[] read = serial.read();
-            if(LOG.isTraceEnabled()) {
-                String s = FormatHelper.byteArrayToString(read);
-                LOG.trace("Echo found " + s);
-            }
+            byte[] read = readWithWait(bytesToSend.length);
+//            if(LOG.isTraceEnabled()) {
+//                String s = FormatHelper.byteArrayToString(read);
+//                LOG.trace("Echo found " + s);
+//            }
             if(!Arrays.equals(bytesToSend, read)) {
-                LOG.info("Collision detected.");
+                if(LOG.isDebugEnabled()) {
+                    String s = FormatHelper.byteArrayToString(read);
+                    LOG.debug("Collision detected. Found echo: " + s);
+                }
+                serial.flush();
+//                serial.read(); // -- Flush serial read buffer
                 return false;
+            } else {
+                if(LOG.isTraceEnabled()) {
+//                    String s = FormatHelper.byteArrayToString(bytesToSend);
+                    LOG.trace("Sent");
+                }
             }
         }
         catch (IOException e) {
@@ -209,6 +224,23 @@ public class NetFefRs485 implements NetFefPhysicalLayer {
             enableRead();
         }
         return true;
+    }
+
+    private byte[] readWithWait(int length) throws IOException {
+        ByteArrayBuilder bab = new ByteArrayBuilder();
+        Date start = new Date();
+        outermost: while(true) {
+            while(serial.available() > 0) {
+                bab.append(serial.read(1));
+                if(bab.getSize() == length) {
+                    break outermost;
+                }
+            }
+            if(new Date().getTime() > (start.getTime() + RECEIVE_MS) ) {
+                break; // -- This is all the bytes we have received
+            }
+        }
+        return bab.getBytes();
     }
 
     private boolean waitForEcho() throws IOException {

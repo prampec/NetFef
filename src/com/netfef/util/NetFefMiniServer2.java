@@ -58,7 +58,7 @@ public class NetFefMiniServer2 {
             }
         });
 
-        System.out.println("Started. Enter command! Commands are: q, t, l, s, r, i, n, f");
+        System.out.println("Started. Enter command! Commands are: q, t, d, l, s, r, i, n, f");
         readAndProcessCommands(network);
 
         System.out.println("Stopping...");
@@ -82,6 +82,9 @@ public class NetFefMiniServer2 {
                     frame.addParameter(new Parameter('i', ParameterType.STRING1, formatDate()));
                     frame.addParameter(new Parameter('h', ParameterType.INTEGER, formatDate2()));
                 }
+                else if(line.startsWith("d")) { // -- List log
+                    frame = new Frame(aPeerAddress, 'm', 'd');
+                }
                 else if(line.startsWith("l")) { // -- List log
                     frame = new Frame(aPeerAddress, 'm', 'l');
                     frame.addParameter(new Parameter('i', ParameterType.BYTE, 0));
@@ -92,18 +95,32 @@ public class NetFefMiniServer2 {
                     {
                         Struct struct = new Struct();
                         struct.addParameter(new Parameter('f', ParameterType.INTEGER, 700));
-                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 800));
+                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 830));
+                        struct.addParameter(new Parameter('t', ParameterType.INTEGER, 3500));
+                        frame.addParameter(new Parameter('p', ParameterType.STRUCT1, struct));
+                    }
+                    {
+                        Struct struct = new Struct();
+                        struct.addParameter(new Parameter('f', ParameterType.INTEGER, 830));
+                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 1830));
                         struct.addParameter(new Parameter('t', ParameterType.INTEGER, 3000));
                         frame.addParameter(new Parameter('p', ParameterType.STRUCT1, struct));
                     }
                     {
                         Struct struct = new Struct();
-                        struct.addParameter(new Parameter('f', ParameterType.INTEGER, 800));
-                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 900));
-                        struct.addParameter(new Parameter('t', ParameterType.INTEGER, 3200));
+                        struct.addParameter(new Parameter('f', ParameterType.INTEGER, 1830));
+                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 2130));
+                        struct.addParameter(new Parameter('t', ParameterType.INTEGER, 3800));
                         frame.addParameter(new Parameter('p', ParameterType.STRUCT1, struct));
                     }
-//                    frame.addParameter(new Parameter('i', ParameterType.BYTE, 0));
+                    {
+                        Struct struct = new Struct();
+                        struct.addParameter(new Parameter('f', ParameterType.INTEGER, 2130));
+                        struct.addParameter(new Parameter('u', ParameterType.INTEGER, 2300));
+                        struct.addParameter(new Parameter('t', ParameterType.INTEGER, 2600));
+                        frame.addParameter(new Parameter('p', ParameterType.STRUCT1, struct));
+                    }
+                    frame.addParameter(new Parameter('i', ParameterType.BYTE, 0));
                     forceReply = true;
                 }
                 else if(line.startsWith("r")) {
@@ -148,12 +165,12 @@ public class NetFefMiniServer2 {
     }
 
     private int formatDate2() {
-        String hhmm = new SimpleDateFormat("hhmm").format(new Date());
+        String hhmm = new SimpleDateFormat("HHmm").format(new Date());
         return Integer.parseInt(hhmm);
     }
 
     private String formatDate() {
-        return new SimpleDateFormat("yyMMddhhmmssF").format(new Date());
+        return new SimpleDateFormat("yyMMddHHmmssF").format(new Date());
     }
 
 

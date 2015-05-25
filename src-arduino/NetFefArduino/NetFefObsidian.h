@@ -16,7 +16,7 @@
 #include "INetFefNetwork.h"
 
 #ifndef COMM_DATA_FRAME_LENGTH
-  #define COMM_DATA_FRAME_LENGTH 60
+  #define COMM_DATA_FRAME_LENGTH 80
 #endif // -- COMM_DATA_FRAME_LENGTH
 
 #define NEXT_POLL_MAX_SECS 5*60
@@ -34,6 +34,7 @@ class NetFefObsidian : public Task, public INetFefNetwork
     boolean joinedToNetwork;
     Print* _debug = NULL;
     virtual char* getVersion() { return "0"; };
+    NetFefFrameBuilder* getFrameBuilder(char subject, char command);
 
   private:
     static void step(Task* me);

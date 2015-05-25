@@ -216,3 +216,8 @@ NetFefFrameBuilder* NetFefObsidian::prepareReply(NetFefFrameReader* frameReader)
 
   return &this->_frameBuilder;
 }
+
+NetFefFrameBuilder* NetFefObsidian::getFrameBuilder(char subject, char command) {
+  this->_frameBuilder.reset(this->_registrationInfo->myAddress, MASTER_ADDRESS, subject, command);
+  return &this->_frameBuilder;
+}
