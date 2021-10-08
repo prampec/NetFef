@@ -7,4 +7,4 @@ The default implementation based on serial communication keeping RS485 (Four Eig
 
 NetFef implementation is currently available in C++ (Arduino) and Java languages.
 
-See comprehensive documentation here: https://doc.csipa.hu/?page_id=363
+See comprehensive documentation here: https://sharedinventions.com/netfef
